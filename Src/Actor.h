@@ -12,7 +12,7 @@ struct Actor//敵の構造体
 {
 	Sprite spr;//画像表示用スプライト
 	Rect collisionShape;//衝突判定の位置と大きさ
-	int health;//耐久値(0以下なら破壊されている)
+	float health;//耐久値(0以下なら破壊されている)
 	float timer;//多目的タイマー
 	int id;//識別用ID
 };
