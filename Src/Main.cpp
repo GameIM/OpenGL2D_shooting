@@ -264,11 +264,11 @@ void processInput(GLFWEW::WindowRef window)
 		{
 			playerVelocity.y = 0;
 		}
-		if (gamepad.buttons &GamePad::DPAD_RIGHT)
+		if (gamepad.buttons&GamePad::DPAD_RIGHT)
 		{
 			playerVelocity.x = 1;
 		}
-		else if (gamepad.buttons &GamePad::DPAD_LEFT)
+		else if (gamepad.buttons&GamePad::DPAD_LEFT)
 		{
 			playerVelocity.x = -1;
 		}
@@ -283,7 +283,7 @@ void processInput(GLFWEW::WindowRef window)
 		}
 
 		//武器の切り替え
-		if (gamepad.buttonDown & GamePad::B)
+		if (gamepad.buttonDown&GamePad::B)
 		{
 			if (weaponType == weaponTypeWideShot)
 			{
@@ -297,7 +297,7 @@ void processInput(GLFWEW::WindowRef window)
 
 		//弾の反射
 		if (weaponType == weaponTypeWideShot &&
-			(gamepad.buttonDown & GamePad::A))
+			(gamepad.buttons&GamePad::A))
 		{
 			for (int i = 0; i < weaponLevel; i++)
 			{
@@ -331,16 +331,17 @@ void processInput(GLFWEW::WindowRef window)
 				const glm::vec3 posFiringPoint = sprPlayer.spr.Position();
 				playerLaserList[0].spr = Sprite("Res/Objects.png", posFiringPoint,
 					Rect(96, 0, 32, 16));
+
 				playerLaserList[0].collisionShape = Rect(-8, -4, 16, 8);
-				playerLaserList[0].health = 1;
+				playerLaserList[0].health = 0.01f;
 				playerLaserList[1].spr = Sprite("Res/Objects.png", posFiringPoint,
 					Rect(112, 0, 32, 16));
-				playerLaserList[1].health = 1;
+				playerLaserList[1].health = 0.01f;
 				playerLaserList[1].collisionShape = Rect(-8, -4, 16, 8);
 				playerLaserList[2].spr = Sprite("Res/Objects.png", posFiringPoint,
 					Rect(128, 0, 32, 16));
 				playerLaserList[2].collisionShape = Rect(-8, -4, 16, 8);
-				playerLaserList[2].health = 1;
+				playerLaserList[2].health = 0.01f;
 				sePlayerLaser->Play(Audio::Flag_Loop);
 			}
 		}
@@ -525,7 +526,7 @@ void update(GLFWEW::WindowRef window)
 			const float bodyLength =
 				posHead.x - posFiringPoint.x - halfHeadSize - halfTailSize;
 			glm::vec3 posBody = playerLaserList[1].spr.Position();
-			posBody.x = posFiringPoint.x + (posHead.x - posFiringPoint.x) * 0.5f;
+			posBody.x = posFiringPoint.x + (posHead.x - posFiringPoint.x) *0.5f;
 			posBody.y = posFiringPoint.y;
 			playerLaserList[1].spr.Position(posBody);
 			playerLaserList[1].spr.Scale(glm::vec2(bodyLength / bodySize, 1));
@@ -604,11 +605,11 @@ void render(GLFWEW::WindowRef window)
 	fontRenderer.BeginUpdate();
 	char str[64];
 	snprintf(str, sizeof(str), "SCORE:%08d", score);
-	fontRenderer.AddString(glm::vec2(-120, 300), str);
-	snprintf(str, sizeof(str), "体力:%02d/%02d", sprPlayer.health,100);
+	fontRenderer.AddString(glm::vec2(-130, 300), str);
+	snprintf(str, sizeof(str), "体力:%0.0f/%0.0f", sprPlayer.health,100.0f);
 	fontRenderer.Color(glm::vec4(0.2f, 0.7f, 0.2f, 1));
 	fontRenderer.Scale(glm::vec2(0.7f, 0.7f));
-	fontRenderer.AddString(glm::vec2(250, 280), str);
+	fontRenderer.AddString(glm::vec2(210, 280), str);
 	fontRenderer.Scale(glm::vec2(0.6f, 0.6f));
 	fontRenderer.AddString(glm::vec2(-390,280), "上下左右キー:移動");
 	fontRenderer.AddString(glm::vec2(-390,260), "SPACEキー:攻撃");
@@ -710,7 +711,7 @@ void playerBulletAndEnemyContactHandler(Actor* bullet, Actor* enemy)
 * 自機と敵の弾の衝突を処理する
 *
 * @param bullet 自機の弾のポインタ
-* @param enemy 敵のポインタ
+* @param player 敵のポインタ
 */
 void playerAndEnemyBulletContactHandler(Actor* player, Actor* bullet)
 {
@@ -750,6 +751,7 @@ void playerAndEnemyBulletContactHandler(Actor* player, Actor* bullet)
 void playerLaserAndEnemyContactHandler(Actor* laser, Actor* enemy)
 {
 	enemy->health -= laser->health;
+
 	if (enemy->health <= 0)
 	{
 		score += 30;
@@ -972,7 +974,7 @@ void updateEnemies(float deltaTime)
 					TA::MoveBy::Create(4, glm::vec3(-1200, 0, 0))));
 				bullet->spr.Scale(glm::vec2(3, 1));
 				bullet->collisionShape = Rect(-12, -4, 24, 8);
-				bullet->health = 1;
+				bullet->health = 5;
 			}
 			continue;
 		}
@@ -1007,6 +1009,6 @@ void updateEnemies(float deltaTime)
 			TA::MoveBy::Create(8, glm::vec3(1200.0f * c, 1200.0f * s, 0))));
 		bullet->spr.Rotation(radian + 3.14f);
 		bullet->collisionShape = Rect(4, -4, 8, 8);
-		bullet->health = 1;
+		bullet->health = 3;
 	}
 }
