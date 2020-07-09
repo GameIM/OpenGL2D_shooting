@@ -127,7 +127,7 @@ bool initialize(MainScene* scene)
 	sprPlayer.spr =
 		Sprite("Res/Objects.png", glm::vec3(0, 0, 0), Rect(0, 0, 64, 32));
 	sprPlayer.collisionShape = Rect(-24, -8, 48, 16);
-	sprPlayer.health = 100;
+	sprPlayer.health = 75;
 	initializeActorList(std::begin(enemyList), std::end(enemyList));
 	initializeActorList(std::begin(playerBulletList), std::end(playerBulletList));
 	initializeActorList(std::begin(effectList), std::end(effectList));
@@ -342,7 +342,7 @@ void processInput(GLFWEW::WindowRef window)
 				playerLaserList[2].spr = Sprite("Res/Objects.png", posFiringPoint,
 					Rect(128, 0, 32, 16));
 				playerLaserList[2].collisionShape = Rect(-8, -4, 16, 8);
-				playerLaserList[2].health = 0.01f;
+				playerLaserList[2].health = 0.08f;
 				sePlayerLaser->Play(Audio::Flag_Loop);
 			}
 		}
@@ -612,7 +612,7 @@ void render(GLFWEW::WindowRef window)
 	char str[64];
 	snprintf(str, sizeof(str), "SCORE:%08d", score);
 	fontRenderer.AddString(glm::vec2(-130, 300), str);
-	snprintf(str, sizeof(str), "‘Ì—Í:%0.0f/%0.0f", sprPlayer.health,100.0f);
+	snprintf(str, sizeof(str), "‘Ì—Í:%0.0f/%0.0f", sprPlayer.health,75.0f);
 	fontRenderer.Color(glm::vec4(0.2f, 0.7f, 0.2f, 1));
 	fontRenderer.Scale(glm::vec2(0.7f, 0.7f));
 	fontRenderer.AddString(glm::vec2(210, 280), str);
@@ -804,7 +804,7 @@ void playerAndEnemyContactHandler(Actor* player, Actor* enemy)
 			blast->health = 1;
 			seBlast->Play();//”š”­‰¹‚ðÄ¶
 		}
-		//•Ší‚ðŽã‰»‚³‚¹‚é
+		//Ž©‹@‚Ì•Ší‚ðŽã‰»‚³‚¹‚é
 		weaponLevel--;
 		if (weaponLevel < weaponLevelMin)
 		{
@@ -826,7 +826,7 @@ void playerAndEnemyContactHandler(Actor* player, Actor* enemy)
 				blast->health = 1;
 				seBlast->Play();//”š”­‰¹‚ðÄ¶
 			}
-			//•Ší‚ðŽã‰»‚³‚¹‚é
+			//Ž©‹@‚Ì•Ší‚ðŽã‰»‚³‚¹‚é
 			weaponLevel--;
 			if (weaponLevel < weaponLevelMin)
 			{
