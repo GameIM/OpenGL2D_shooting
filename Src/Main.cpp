@@ -30,12 +30,12 @@ Actor playerBulletList[128];//自機の弾のリスト
 Actor playerLaserList[3];//自機のレーザーのリスト
 Actor enemyList[128];//敵のリスト
 Actor effectList[128];//爆発などの特殊効果用スプライトのリスト
-Actor itemList[64];//アイテム用スプライトのリスト
+Actor itemList[10];//アイテム用スプライトのリスト
 Actor enemyBulletList[256];//敵の弾のリスト
 
 int score;//プレイヤーの得点
 float timer;
-
+float shotTimer;//弾の受付時間
 const int weaponLevelMin = 1;//自機の武器強化の最低段階
 const int weaponLevelMax = 5;//自機の武器強化の最高段階
 int weaponLevel;//自機の武器強化段階
@@ -297,7 +297,7 @@ void processInput(GLFWEW::WindowRef window)
 
 		//弾の反射
 		if (weaponType == weaponTypeWideShot &&
-			(gamepad.buttons&GamePad::A))
+			(gamepad.buttons&GamePad::A  && shotTimer <= 0))
 		{
 			for (int i = 0; i < weaponLevel; i++)
 			{
@@ -310,6 +310,7 @@ void processInput(GLFWEW::WindowRef window)
 				{
 					bullet->spr = Sprite("Res/Objects.png",
 						sprPlayer.spr.Position(), Rect(64, 0, 32, 16));
+					shotTimer = 1.0f / 10.0f;
 					const float angles[] = { 0,7.5f,-7.5f,15.0f,-15.0f };
 					const float radian = angles[i] / 180.0f * 3.14f;
 					const float c = std::cos(radian);
@@ -431,6 +432,11 @@ void update(GLFWEW::WindowRef window)
 		}
 		sprPlayer.spr.Update(deltaTime);
 
+		//弾の制限
+		if (shotTimer > 0)
+		{
+			shotTimer -= deltaTime;
+		}
 		/*
 		//得点に応じて自機の武器を強化する
 		weponLevel = weponLevelMin + score / 2000;
