@@ -30,7 +30,7 @@ Actor playerBulletList[128];//自機の弾のリスト
 Actor playerLaserList[3];//自機のレーザーのリスト
 Actor enemyList[128];//敵のリスト
 Actor effectList[128];//爆発などの特殊効果用スプライトのリスト
-Actor itemList[10];//アイテム用スプライトのリスト
+Actor itemList[30];//アイテム用スプライトのリスト
 Actor enemyBulletList[256];//敵の弾のリスト
 
 int score;//プレイヤーの得点
@@ -804,23 +804,35 @@ void playerAndEnemyContactHandler(Actor* player, Actor* enemy)
 			blast->health = 1;
 			seBlast->Play();//爆発音を再生
 		}
-	}
-	if (player->health <= 0)
-	{
-		Actor* blast = findAvailableActor(
-			std::begin(effectList), std::end(effectList));
-		if (blast != nullptr)
+		//武器を弱化させる
+		weaponLevel--;
+		if (weaponLevel < weaponLevelMin)
 		{
-			blast->spr = Sprite("Res/Objects.png", player->spr.Position());
-			blast->spr.Animator(FrameAnimation::Animate::Create(tlBlast));
-			namespace TA = TweenAnimation;
-			blast->spr.Tweener(TA::Animate::Create(
-				TA::Rotation::Create(20 / 60.0f, 1.5f)));
-			blast->spr.Scale(glm::vec2(2, 2));//爆発の大きさ
-			blast->health = 1;
-			seBlast->Play();//爆発音を再生
+			weaponLevel = weaponLevelMin;
 		}
 	}
+		if (player->health <= 0)
+		{
+			Actor* blast = findAvailableActor(
+				std::begin(effectList), std::end(effectList));
+			if (blast != nullptr)
+			{
+				blast->spr = Sprite("Res/Objects.png", player->spr.Position());
+				blast->spr.Animator(FrameAnimation::Animate::Create(tlBlast));
+				namespace TA = TweenAnimation;
+				blast->spr.Tweener(TA::Animate::Create(
+					TA::Rotation::Create(20 / 60.0f, 1.5f)));
+				blast->spr.Scale(glm::vec2(2, 2));//爆発の大きさ
+				blast->health = 1;
+				seBlast->Play();//爆発音を再生
+			}
+			//武器を弱化させる
+			weaponLevel--;
+			if (weaponLevel < weaponLevelMin)
+			{
+				weaponLevel = weaponLevelMin;
+			}
+		}
 }
 
 /**
