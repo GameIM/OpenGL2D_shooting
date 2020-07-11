@@ -745,6 +745,12 @@ void playerAndEnemyBulletContactHandler(Actor* player, Actor* bullet)
 			blast->health = 1;
 			seBlast->Play();//”š”­‰¹‚ğÄ¶
 		}
+		//©‹@‚ÌƒŒƒxƒ‹‚ğã‰»‚³‚¹‚é
+		weaponLevel--;
+		if (weaponLevel < weaponLevelMin)
+		{
+			weaponLevel = weaponLevelMin;
+		}
 	}
 }
 
