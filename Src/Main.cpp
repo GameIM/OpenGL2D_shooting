@@ -320,7 +320,7 @@ void processInput(GLFWEW::WindowRef window)
 						TweenAnimation::EasingType::Linear)));
 					bullet->spr.Rotation(radian);
 					bullet->collisionShape = Rect(-16, -8, 32, 16);
-					bullet->health = 1;
+					bullet->health = 0.5f;
 				}
 			}
 			sePlayerShot->Play();//’e‚Ì”­ŽË‰¹‚ðÄ¶
