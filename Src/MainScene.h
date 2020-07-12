@@ -9,6 +9,8 @@ const int tileId_MediumEnemy = 191;
 const int tileId_LargeEnemy = 63;
 const int tileId_Boss = 75;
 const int tileId_PowerUpItem = 230;
+const int tiled_HealItem = 227;
+
 
 /**
 * マップに配置されたオブジェクトのデータ
