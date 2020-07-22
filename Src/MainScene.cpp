@@ -41,11 +41,11 @@ const FrameAnimation::KeyFrame bossKeyFrames[] =
 */
 MapObjectData mapObjectDataList[] =
 {
-	{tileId_SmallEnemy, Rect(480,0,32,32),Rect(-16,-16,32,32),3,
+	{tileId_SmallEnemy, Rect(480,0,32,32),Rect(-16,-16,32,32),2,
 	nullptr,createCurveTween},
-	{tileId_MediumEnemy,Rect(464,128,48,32),Rect(-24,-16,48,32),5,
+	{tileId_MediumEnemy,Rect(464,128,48,32),Rect(-24,-16,48,32),4,
 	nullptr,createUTurnTween},
-	{tileId_LargeEnemy, Rect(448,352,64,64),Rect(-32,-32,64,64),30,
+	{tileId_LargeEnemy, Rect(448,352,64,64),Rect(-32,-32,64,64),15,
 	nullptr,createSwayTween},
 	{tileId_Boss,Rect(320,128,128,256),Rect(-48,-112,96,224),200,
 	nullptr,createBossTween},
@@ -156,7 +156,7 @@ TweenAnimation::TweenPtr createBossTween()
 		TA::EasingType::EaseOut));
 	seq->Add(TA::MoveBy::Create(1, glm::vec3(0, 100, 0),
 		TA::EasingType::EaseInOut));
-	for (int i = 0; i < 8; i++)
+	for (int i = 0; i < 12; i++)
 	{
 		seq->Add(TA::MoveBy::Create(2, glm::vec3(0, -200, 0),
 			TA::EasingType::EaseInOut));
