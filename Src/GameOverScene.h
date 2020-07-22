@@ -11,6 +11,7 @@ struct GameOverScene
 {
 	Sprite bg;
 	float timer;
+	Audio::SoundPtr GameOverBgm;
 };
 bool initialize(GameOverScene*);
 void finalize(GameOverScene*);
