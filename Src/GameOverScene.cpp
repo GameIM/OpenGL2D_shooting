@@ -15,6 +15,9 @@
 */
 bool initialize(GameOverScene* scene)
 {
+	Audio::EngineRef audio = Audio::Engine::Instance();
+	scene->GameOverBgm = audio.Prepare("Res/Audio/GameOver.mp3");
+	scene->GameOverBgm->Play();
 	scene->bg = Sprite("Res/UnknownPlanet.png");
 	scene->timer = 0.5f;//“ü—Í‚ðŽó‚¯•t‚¯‚È‚¢ŠúŠÔ(•b)
 	return true;
@@ -28,6 +31,7 @@ bool initialize(GameOverScene* scene)
 void finalize(GameOverScene* scene)
 {
 	scene->bg = Sprite();
+	scene->GameOverBgm->Stop();
 }
 
 /**
@@ -84,7 +88,12 @@ void render(GLFWEW::WindowRef window, GameOverScene* scene)
 	renderer.Draw(glm::vec2(windowWidth, windowHeight));
 
 	fontRenderer.BeginUpdate();
-	fontRenderer.AddString(glm::vec2(-144, 16), "GAME OVER");
+	fontRenderer.AddString(glm::vec2(-120, 16), "GAME OVER");
+	//fontRenderer.Scale(glm::vec2(2.0f, 2.0f));
+	if ((int)(scene->timer * 10) % 2)
+	{
+		fontRenderer.AddString(glm::vec2(-250, -30), "PRESS ENTER BACK TATLE");
+	}
 	fontRenderer.EndUpdate();
 	fontRenderer.Draw();
 
