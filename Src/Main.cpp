@@ -26,12 +26,13 @@ Sprite sprBackground;//背景用スプライト
 Actor sprPlayer;//自機用スプライト
 
 glm::vec3 playerVelocity;//自機の移動速度
-Actor playerBulletList[128];//自機の弾のリスト
+Actor playerBulletList[130];//自機の弾のリスト
 Actor playerLaserList[3];//自機のレーザーのリスト
-Actor enemyList[128];//敵のリスト
-Actor effectList[128];//爆発などの特殊効果用スプライトのリスト
-Actor itemList[30];//アイテム用スプライトのリスト
-Actor enemyBulletList[256];//敵の弾のリスト
+Actor enemyList[130];//敵のリスト
+Actor effectList[130];//爆発などの特殊効果用スプライトのリスト
+Actor itemList[15];//アイテム用スプライトのリスト
+Actor healItemList[5];//回復アイテム用のリスト
+Actor enemyBulletList[260];//敵の弾のリスト
 
 int score;//プレイヤーの得点
 float timer;
@@ -40,9 +41,12 @@ const int weaponLevelMin = 1;//自機の武器強化の最低段階
 const int weaponLevelMax = 5;//自機の武器強化の最高段階
 int weaponLevel;//自機の武器強化段階
 
+const float maxHealth = 75;//自機の体力の最大値
+
 const int weaponTypeWideShot = 0;//広範囲ショット
 const int weaponTypeLaser = 1;//レーザー
 int weaponType;//選択中の武器
+
 
 //音声制御用変数
 Audio::SoundPtr bgm;
@@ -50,6 +54,7 @@ Audio::SoundPtr sePlayerShot;
 Audio::SoundPtr sePlayerLaser;
 Audio::SoundPtr seBlast;
 Audio::SoundPtr sePowerUp;
+Audio::SoundPtr seHeal;
 
 //敵のアニメーション
 const FrameAnimation::KeyFrame enemyKeyFrames[] =
@@ -109,6 +114,7 @@ void playerAndEnemyBulletContactHandler(Actor* player, Actor* bullet);
 void playerLaserAndEnemyContactHandler(Actor* laser, Actor* enemy);
 void playerAndEnemyContactHandler(Actor* player, Actor* enemy);
 void playerAndItemContactHandler(Actor*, Actor*);
+void playerAndHealItemContactHandler(Actor*, Actor*);
 void stopPlayerLaser();
 void generateObjectFromMap(float);
 void updateEnemies(float);
@@ -132,6 +138,7 @@ bool initialize(MainScene* scene)
 	initializeActorList(std::begin(playerBulletList), std::end(playerBulletList));
 	initializeActorList(std::begin(effectList), std::end(effectList));
 	initializeActorList(std::begin(itemList), std::end(itemList));
+	initializeActorList(std::begin(healItemList), std::end(healItemList));
 	initializeActorList(std::begin(playerLaserList), std::end(playerLaserList));
 	initializeActorList(std::begin(enemyBulletList), std::end(enemyBulletList));
 
@@ -155,6 +162,7 @@ bool initialize(MainScene* scene)
 	sePlayerShot = audio.Prepare("Res/Audio/PlayerShot.xwm");
 	sePlayerLaser = audio.Prepare("Res/Audio/Laser.xwm");
 	sePowerUp = audio.Prepare("Res/Audio/GetItem.xwm");
+	seHeal = audio.Prepare("Res/Audio/Heal.mp3");
 	bgm = audio.Prepare("Res/Audio/Neolith.xwm");
 
 	//BGMをループを再生する
@@ -391,18 +399,25 @@ void update(GLFWEW::WindowRef window)
 		boss = nullptr;
 		timer = 2;
 	}
+	/*
+	else if (boss->health >= 0)
+	{
+		bgm->Stop();
+		gameState = gameStateGameOver;
+	}
+	*/
 	if (isStagePassed)
 	{
 		timer -= deltaTime;
 		if (timer <= 0)
 		{
+			bgm->Stop();//BGMを停止する
 			stopPlayerLaser();
 			++mainScene.stageNo;
 			initialize(&mainScene);
 			return;
 		}
 	}
-
 	//自機の移動
 	if (sprPlayer.health > 0)
 	{
@@ -507,6 +522,7 @@ void update(GLFWEW::WindowRef window)
 		updateActorList(std::begin(playerBulletList), std::end(playerBulletList), deltaTime);
 		updateActorList(std::begin(effectList), std::end(effectList), deltaTime);
 		updateActorList(std::begin(itemList), std::end(itemList),deltaTime);
+		updateActorList(std::begin(healItemList), std::end(healItemList), deltaTime);
 		updateActorList(std::begin(playerLaserList), std::end(playerLaserList),deltaTime);
 		updateActorList(std::begin(enemyBulletList), std::end(enemyBulletList), deltaTime);
 
@@ -566,11 +582,17 @@ void update(GLFWEW::WindowRef window)
 			std::begin(enemyList), std::end(enemyList),
 			playerAndEnemyContactHandler);
 
-		//自機とアイテムの衝突判定
+		//自機と武器強化アイテムの衝突判定
 		detectCollision(
 		&sprPlayer, &sprPlayer + 1,
 			std::begin(itemList), std::end(itemList),
 			playerAndItemContactHandler);
+
+		//自機と回復アイテムの衝突判定
+		detectCollision(
+			&sprPlayer, &sprPlayer + 1,
+			std::begin(healItemList), std::end(healItemList),
+		playerAndHealItemContactHandler);
 	}
 	
 }
@@ -603,10 +625,12 @@ void render(GLFWEW::WindowRef window)
 	renderActorList(std::begin(playerBulletList), std::end(playerBulletList));
 	renderActorList(std::begin(effectList), std::end(effectList));
 	renderActorList(std::begin(itemList), std::end(itemList));
+	renderActorList(std::begin(healItemList), std::end(healItemList));
 	renderActorList(std::begin(playerLaserList), std::end(playerLaserList));
 	renderActorList(std::begin(enemyBulletList), std::end(enemyBulletList));
 	renderer.EndUpdate();
 	renderer.Draw({ windowWidth,windowHeight });
+	
 
 	fontRenderer.BeginUpdate();
 	char str[64];
@@ -629,8 +653,6 @@ void render(GLFWEW::WindowRef window)
 	fontRenderer.Scale(glm::vec2(1, 1));
 	fontRenderer.Color(glm::vec4(1, 1, 1, 1));
 	fontRenderer.Thickness(0.33f);
-
-	
 
 	if (isStagePassed)
 	{
@@ -700,15 +722,48 @@ void playerBulletAndEnemyContactHandler(Actor* bullet, Actor* enemy)
 		score += 100;//敵を破壊したら得点を増やす
 		Actor* blast = findAvailableActor(
 			std::begin(effectList), std::end(effectList));
-		if(blast != nullptr)
+
+		if (blast != nullptr) { //爆発アクターの空きが見つかったら、{
+			if (enemy->id == tileId_LargeEnemy) { //  大型の敵のときは、{
+				//    大きい爆発を表示する.
+			}
+			else { //  }それ以外は、{
+				//    普通の爆発を表示する
+			}
+			//  爆発音を再生.
+		} //} 爆発アクター空き処理終了
+
+		//爆発アクターの空きが見つかったら、
+		//  普通の爆発を表示する.
+		//  大型の敵のときは、{
+		//    大きい爆発を表示する.
+		//  }それ以外は、{
+		//    爆発音を再生.
+		//  }
+		//爆発アクター空き処理終了
+
+		if (blast != nullptr)
 		{
-			blast->spr = Sprite("Res/Objects.png",enemy->spr.Position());
+			blast->spr = Sprite("Res/Objects.png", enemy->spr.Position());
 			blast->spr.Animator(FrameAnimation::Animate::Create(tlBlast));
 			namespace TA = TweenAnimation;
 			blast->spr.Tweener(TA::Animate::Create(
 				TA::Rotation::Create(20 / 60.0f, 1.5f)));
 			blast->health = 1;
-			seBlast->Play();//爆発音を再生
+
+			if (enemy->id == tileId_LargeEnemy)
+			{
+				blast->spr.Scale(glm::vec2(2));
+			}
+			else if (enemy->id == tileId_Boss)
+			{
+				blast->spr.Scale(glm::vec2(8));
+			}
+			else
+			{
+				blast->spr.Scale(glm::vec2(1));
+			}
+			seBlast->Play();
 		}
 	}
 }
@@ -771,14 +826,22 @@ void playerLaserAndEnemyContactHandler(Actor* laser, Actor* enemy)
 		//爆発を表示する
 		Actor* blast =
 			findAvailableActor(std::begin(effectList), std::end(effectList));
+		blast->spr = Sprite("Res/Objects.png", enemy->spr.Position());
+		blast->spr.Animator(FrameAnimation::Animate::Create(tlBlast));
+		namespace TA = TweenAnimation;
+		blast->spr.Tweener(
+			TA::Animate::Create(TA::Rotation::Create(20 / 60.0f, 1.5f)));
+		blast->health = 1;
 		if (blast != nullptr)
 		{
-			blast->spr = Sprite("Res/Objects.png", enemy->spr.Position());
-			blast->spr.Animator(FrameAnimation::Animate::Create(tlBlast));
-			namespace TA = TweenAnimation;
-			blast->spr.Tweener(
-				TA::Animate::Create(TA::Rotation::Create(20 / 60.0f, 1.5f)));
-			blast->health = 1;
+			if (enemy->id == tileId_LargeEnemy)
+			{
+				blast->spr.Scale(glm::vec2(2));
+			}
+			else
+			{
+				blast->spr.Scale(glm::vec2(1));
+			}
 			seBlast->Play();//爆発音を再生
 		}
 	}
@@ -800,15 +863,24 @@ void playerAndEnemyContactHandler(Actor* player, Actor* enemy)
 	{
 		Actor* blast = findAvailableActor(
 			std::begin(effectList), std::end(effectList));
+		blast->spr = Sprite("Res/Objects.png", enemy->spr.Position());
+		blast->spr.Animator(FrameAnimation::Animate::Create(tlBlast));
+		namespace TA = TweenAnimation;
+		blast->spr.Tweener(TA::Animate::Create(
+			TA::Rotation::Create(20 / 60.0f, 1.5f)));
+		blast->health = 1;
+
 		if (blast != nullptr)
 		{
-			blast->spr = Sprite("Res/Objects.png", enemy->spr.Position());
-			blast->spr.Animator(FrameAnimation::Animate::Create(tlBlast));
-			namespace TA = TweenAnimation;
-			blast->spr.Tweener(TA::Animate::Create(
-				TA::Rotation::Create(20 / 60.0f, 1.5f)));
-			blast->health = 1;
-			seBlast->Play();//爆発音を再生
+			if (enemy->id == tileId_LargeEnemy)
+			{
+				blast->spr.Scale(glm::vec2(2));
+			}
+			else
+			{
+				blast->spr.Scale(glm::vec2(1));
+			}
+			seBlast->Play();
 		}
 		//自機の武器を弱化させる
 		weaponLevel--;
@@ -858,8 +930,32 @@ void playerAndItemContactHandler(Actor* player, Actor* item)
 	{
 		weaponLevel = weaponLevelMax;
 	}
+
 }
 
+/**
+*自機と回復アイテムの衝突を処理する
+*
+* @param player 自機のポインタ
+* @param item アイテムのポインタ
+*/
+void playerAndHealItemContactHandler(Actor* player, Actor* item)
+{
+	player->health += 10;
+	item->health = 0;
+	seHeal->SetVolume(2);
+	seHeal->Play();
+
+	//回復の上限を設定
+	if (player->health > maxHealth)
+	{
+		player->health = maxHealth;
+	}
+}
+
+/**
+*レーザーを止める処理を作成する
+*/
 void stopPlayerLaser()
 {
 	if (playerLaserList[0].health > 0)
@@ -935,7 +1031,7 @@ void generateObjectFromMap(float deltaTime)
 			}
 			else if (tileId == tileId_PowerUpItem)
 			{
-				//アイテムを出現させる
+				//武器強化アイテムを出現させる
 				Actor* item = findAvailableActor(
 					std::begin(itemList), std::end(itemList));
 				if (item != nullptr)
@@ -949,6 +1045,24 @@ void generateObjectFromMap(float deltaTime)
 						TA::Animate::Create(TA::MoveBy::Create(16, glm::vec3(-1000, 0, 0))));
 					item->collisionShape = Rect(-16, -16, 32, 32);
 					item->health = 1;
+				}
+			}
+			else if (tileId == tileId_HealItem)
+			{
+				//回復アイテムを出現させる
+				Actor* healItem = findAvailableActor(
+					std::begin(healItemList), std::end(healItemList));
+				if (healItem != nullptr)
+				{
+					const float sy =
+						windowHeight * 0.5f - (float)(mapY * tileSize.x);
+					healItem->spr = Sprite("Res/Objects.png", glm::vec3(0.5f * windowWidth, sy, 0),
+						Rect(96, 32, 32, 32));
+					namespace TA = TweenAnimation;
+					healItem->spr.Tweener(
+						TA::Animate::Create(TA::MoveBy::Create(16, glm::vec3(-1000, 0, 0))));
+					healItem->collisionShape = Rect(-16, -16, 32, 32);
+					healItem->health = 1;
 				}
 			}
 		}
@@ -970,13 +1084,52 @@ void updateEnemies(float deltaTime)
 			continue;
 		}
 		//一定時間ごとに弾を発射
-		const float shotInterval = 2.0f;
+		const float shotInterval = 3.0f;
 		i->timer += deltaTime;
 		if (i->timer < shotInterval)
 		{
 			continue;
 		}
 		i->timer -= shotInterval;
+
+		//小型の敵の攻撃
+		if (i->id == tileId_SmallEnemy)
+		{
+				//自機の方向を計算
+				const glm::vec3 distance = playerPos - i->spr.Position();
+				const float radian = std::atan2(distance.y, distance.x);
+				const float c = std::cos(radian);
+				const float s = std::sin(radian);
+
+				//画面外にいるときは発射しない
+				const glm::vec3 enemyPos = i->spr.Position();
+				if (enemyPos.x <= windowWidth * -0.5f || enemyPos.x > windowWidth * 0.5f)
+				{
+					continue;
+				}
+				if (enemyPos.y <= windowHeight * -0.5f || enemyPos.y > windowHeight * 0.5f)
+				{
+					continue;
+				}
+				//空いている敵の弾を検索
+				Actor* bullet = findAvailableActor(
+					std::begin(enemyBulletList), std::end(enemyBulletList));
+				if (bullet == nullptr)
+				{
+					continue;
+				}
+				//自機に向かって弾を発射
+				Actor* smallBullet = findAvailableActor(
+					std::begin(enemyBulletList), std::end(enemyBulletList));
+				smallBullet->spr =
+					Sprite("Res/Objects.png", enemyPos, Rect(464, 0, 16, 16));
+				namespace TA = TweenAnimation;
+				smallBullet->spr.Tweener(TA::Animate::Create(
+					TA::MoveBy::Create(8, glm::vec3(1200.0f * c, 1200.0f * s, 0))));
+				smallBullet->spr.Rotation(radian + 3.14f);
+				smallBullet->collisionShape = Rect(-4, -4, 8, 8);
+				smallBullet->health = 3;
+		}
 
 		//大型の敵の攻撃
 		if (i->id == tileId_LargeEnemy)
@@ -1002,37 +1155,87 @@ void updateEnemies(float deltaTime)
 			}
 			continue;
 		}
-		//画面外にいるときは発射しない
-		const glm::vec3 enemyPos = i->spr.Position();
-		if (enemyPos.x <= windowWidth * -0.5f || enemyPos.x > windowWidth * 0.5f)
+		//ボスの攻撃
+		if (i->id == tileId_Boss)
 		{
-			continue;
+			{
+				//緑の弾を射出する処理を作成する
+				Actor* bossBullet = findAvailableActor(
+					std::begin(enemyBulletList), std::end(enemyBulletList));
+				if (bossBullet != nullptr)
+				{
+					glm::vec3 bossPos = i->spr.Position();
+					bossBullet->spr =
+						Sprite("Res/Objects.png", bossPos, Rect(448, 0, 16, 16));
+					namespace TA = TweenAnimation;
+					TA::SequencePtr seq = TA::Sequence::Create(1);
+					seq->Add(TA::MoveBy::Create(
+						1, glm::vec3(-1000, 1000, 0), TA::EasingType::Linear));
+					bossBullet->spr.Tweener(TA::Animate::Create(seq));
+					bossBullet->collisionShape = Rect(-4, -4, 8, 8);
+					bossBullet->health = 2;
+				}
+			}
+			{
+				//緑の弾を射出する処理を作成する
+				Actor* bossBullet = findAvailableActor(
+					std::begin(enemyBulletList), std::end(enemyBulletList));
+				if (bossBullet != nullptr)
+				{
+					glm::vec3 bossPos = i->spr.Position();
+					bossBullet->spr =
+						Sprite("Res/Objects.png", bossPos, Rect(448, 0, 16, 16));
+					namespace TA = TweenAnimation;
+					TA::SequencePtr seq = TA::Sequence::Create(1);
+					seq->Add(TA::MoveBy::Create(
+						1, glm::vec3(-1000, 0, 0), TA::EasingType::Linear));
+					bossBullet->spr.Tweener(TA::Animate::Create(seq));
+					bossBullet->collisionShape = Rect(-4, -4, 8, 8);
+					bossBullet->health = 2;
+				}
+			}
+			{
+				//緑の弾を射出する処理を作成する
+				Actor* bossBullet = findAvailableActor(
+					std::begin(enemyBulletList), std::end(enemyBulletList));
+				if (bossBullet != nullptr)
+				{
+					glm::vec3 bossPos = i->spr.Position();
+					bossBullet->spr =
+						Sprite("Res/Objects.png", bossPos, Rect(448, 0, 16, 16));
+					namespace TA = TweenAnimation;
+					TA::SequencePtr seq = TA::Sequence::Create(1);
+					seq->Add(TA::MoveBy::Create(
+						1, glm::vec3(-1000, -1000, 0), TA::EasingType::Linear));
+					bossBullet->spr.Tweener(TA::Animate::Create(seq));
+					bossBullet->collisionShape = Rect(-4, -4, 8, 8);
+					bossBullet->health = 2;
+				}
+			}
+			{
+				/*
+				//青の弾を射出する処理を作成する
+				for(int j = 0; j < 2; j++)
+				{
+					Actor* bossBulletBlue = findAvailableActor(
+						std::begin(enemyBulletList), std::end(enemyBulletList));
+					if (bossBulletBlue != nullptr)
+					{
+						glm::vec3 bossPos = i->spr.Position();
+						bossPos.y += (float)(32 - j * 48);
+						bossBulletBlue->spr =
+							Sprite("Res/Objects.png", bossPos, Rect(448, 48, 32, 16));
+						namespace TA = TweenAnimation;
+						TA::SequencePtr seq = TA::Sequence::Create(1);
+						seq->Add(TA::MoveBy::Create(
+							2, glm::vec3(-100, 0, 0), TA::EasingType::Linear));
+						bossBulletBlue->spr.Tweener(TA::Animate::Create(seq));
+						bossBulletBlue->collisionShape = Rect(-4, -4, 8, 8);
+						bossBulletBlue->health = 1;
+					}
+				}
+				*/
+			}
 		}
-		if (enemyPos.y <= windowHeight * -0.5f || enemyPos.y > windowHeight * 0.5f)
-		{
-			continue;
-		}
-		//空いている敵の弾を検索
-		Actor* bullet = findAvailableActor(
-			std::begin(enemyBulletList), std::end(enemyBulletList));
-		if (bullet == nullptr)
-		{
-			continue;
-		}
-		//自機の方向を計算
-		const glm::vec3 distance = playerPos - i->spr.Position();
-		const float radian = std::atan2(distance.y, distance.x);
-		const float c = std::cos(radian);
-		const float s = std::sin(radian);
-
-		//自機に向かって弾を発射
-		bullet->spr =
-			Sprite("Res/Objects.png", i->spr.Position(), Rect(464, 0, 16, 16));
-		namespace TA = TweenAnimation;
-		bullet->spr.Tweener(TA::Animate::Create(
-			TA::MoveBy::Create(8, glm::vec3(1200.0f * c, 1200.0f * s, 0))));
-		bullet->spr.Rotation(radian + 3.14f);
-		bullet->collisionShape = Rect(4, -4, 8, 8);
-		bullet->health = 3;
 	}
 }
