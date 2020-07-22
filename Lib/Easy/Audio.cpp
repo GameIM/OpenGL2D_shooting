@@ -546,6 +546,12 @@ public:
       if (!(state & State_Pausing) && FAILED(sourceVoice->Stop())) {
         return false;
       }
+
+	  PROPVARIANT value;
+	  value.vt = VT_I8;
+	  value.hVal.QuadPart = 0;
+	  sourceReader->SetCurrentPosition(GUID_NULL, value);
+
       state = State_Stopped;
       isEndOfStream = false;
       curBuf = 0;
