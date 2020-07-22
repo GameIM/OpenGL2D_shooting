@@ -89,7 +89,6 @@ void render(GLFWEW::WindowRef window, GameOverScene* scene)
 
 	fontRenderer.BeginUpdate();
 	fontRenderer.AddString(glm::vec2(-120, 16), "GAME OVER");
-	//fontRenderer.Scale(glm::vec2(2.0f, 2.0f));
 	if ((int)(scene->timer * 10) % 2)
 	{
 		fontRenderer.AddString(glm::vec2(-250, -30), "PRESS ENTER BACK TATLE");
