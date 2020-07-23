@@ -53,6 +53,7 @@ Audio::SoundPtr bgm;
 Audio::SoundPtr sePlayerShot;
 Audio::SoundPtr sePlayerLaser;
 Audio::SoundPtr seBlast;
+Audio::SoundPtr seBlastBoss;
 Audio::SoundPtr sePowerUp;
 Audio::SoundPtr seHeal;
 
@@ -159,6 +160,7 @@ bool initialize(MainScene* scene)
 	//‰¹º‚ğ€”õ‚·‚é
 	Audio::EngineRef audio = Audio::Engine::Instance();
 	seBlast = audio.Prepare("Res/Audio/Blast.xwm");
+	seBlastBoss = audio.Prepare("Res/Audio/BlastBoss.mp3");
 	sePlayerShot = audio.Prepare("Res/Audio/PlayerShot.xwm");
 	sePlayerLaser = audio.Prepare("Res/Audio/Laser.xwm");
 	sePowerUp = audio.Prepare("Res/Audio/GetItem.xwm");
@@ -744,26 +746,49 @@ void playerBulletAndEnemyContactHandler(Actor* bullet, Actor* enemy)
 
 		if (blast != nullptr)
 		{
-			blast->spr = Sprite("Res/Objects.png", enemy->spr.Position());
-			blast->spr.Animator(FrameAnimation::Animate::Create(tlBlast));
-			namespace TA = TweenAnimation;
-			blast->spr.Tweener(TA::Animate::Create(
-				TA::Rotation::Create(20 / 60.0f, 1.5f)));
-			blast->health = 1;
-
-			if (enemy->id == tileId_LargeEnemy)
+			if (enemy->id == tileId_Boss)
 			{
-				blast->spr.Scale(glm::vec2(2));
-			}
-			else if (enemy->id == tileId_Boss)
-			{
-				blast->spr.Scale(glm::vec2(8));
+				//”š”­‚ğ3‚Â•\¦‚·‚é
+				for (int j = 0; j < 3; j++)
+				{
+					Actor* blast = findAvailableActor(
+						std::begin(effectList), std::end(effectList));
+					if (blast != nullptr)
+					{
+						blast->spr = Sprite("Res/Objects.png", enemy->spr.Position() + glm::vec3(0, 96 * j , 0));
+						blast->spr.Scale(glm::vec2(10));
+						blast->spr.Animator(FrameAnimation::Animate::Create(tlBlast));
+						namespace TA = TweenAnimation;
+						blast->spr.Tweener(TA::Animate::Create(
+							TA::Rotation::Create(20 / 60.0f, 1.5f)));
+						blast->health = 1;
+						seBlastBoss->Play();
+					}
+				}
 			}
 			else
 			{
-				blast->spr.Scale(glm::vec2(1));
+				Actor*  blast = findAvailableActor(
+					std::begin(effectList), std::end(effectList));
+				if (blast != nullptr)
+				{
+					blast->spr = Sprite("Res/Objects.png", enemy->spr.Position());
+					blast->spr.Animator(FrameAnimation::Animate::Create(tlBlast));
+					namespace TA = TweenAnimation;
+					blast->spr.Tweener(TA::Animate::Create(
+						TA::Rotation::Create(20 / 60.0f, 1.5f)));
+					blast->health = 1;
+				}
+				if (enemy->id == tileId_LargeEnemy)
+				{
+					blast->spr.Scale(glm::vec2(2));
+				}
+				else
+				{
+					blast->spr.Scale(glm::vec2(1));
+				}
+				seBlast->Play();
 			}
-			seBlast->Play();
 		}
 	}
 }
@@ -822,27 +847,54 @@ void playerLaserAndEnemyContactHandler(Actor* laser, Actor* enemy)
 	if (enemy->health <= 0)
 	{
 		score += 30;
-
-		//”š”­‚ğ•\¦‚·‚é
-		Actor* blast =
-			findAvailableActor(std::begin(effectList), std::end(effectList));
-		blast->spr = Sprite("Res/Objects.png", enemy->spr.Position());
-		blast->spr.Animator(FrameAnimation::Animate::Create(tlBlast));
-		namespace TA = TweenAnimation;
-		blast->spr.Tweener(
-			TA::Animate::Create(TA::Rotation::Create(20 / 60.0f, 1.5f)));
-		blast->health = 1;
+		Actor* blast = findAvailableActor(
+			std::begin(effectList), std::end(effectList));
+		
 		if (blast != nullptr)
 		{
-			if (enemy->id == tileId_LargeEnemy)
+			if (enemy->id == tileId_Boss)
 			{
-				blast->spr.Scale(glm::vec2(2));
+				//”š”­‚ğ3‚Â•\¦‚·‚é
+				for (int j = 0; j < 3; j++)
+				{
+					Actor* blast = findAvailableActor(
+						std::begin(effectList), std::end(effectList));
+					if (blast != nullptr)
+					{
+						blast->spr = Sprite("Res/Objects.png", enemy->spr.Position() + glm::vec3(0, 96 * j, 0));
+						blast->spr.Scale(glm::vec2(10));
+						blast->spr.Animator(FrameAnimation::Animate::Create(tlBlast));
+						namespace TA = TweenAnimation;
+						blast->spr.Tweener(TA::Animate::Create(
+							TA::Rotation::Create(20 / 60.0f, 1.5f)));
+						blast->health = 1;
+						seBlastBoss->Play();
+					}
+				}
 			}
 			else
 			{
-				blast->spr.Scale(glm::vec2(1));
+				Actor* blast = findAvailableActor(
+					std::begin(effectList), std::end(effectList));
+				if (blast != nullptr)
+				{
+					blast->spr = Sprite("Res/Objects.png", enemy->spr.Position());
+					blast->spr.Animator(FrameAnimation::Animate::Create(tlBlast));
+					namespace TA = TweenAnimation;
+					blast->spr.Tweener(TA::Animate::Create(
+						TA::Rotation::Create(20 / 60.0f, 1.5f)));
+					blast->health = 1;
+				}
+				if (enemy->id == tileId_LargeEnemy)
+				{
+					blast->spr.Scale(glm::vec2(2));
+				}
+				else
+				{
+					blast->spr.Scale(glm::vec2(1));
+				}
+				seBlast->Play();//”š”­‰¹‚ğÄ¶
 			}
-			seBlast->Play();//”š”­‰¹‚ğÄ¶
 		}
 	}
 }
