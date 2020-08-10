@@ -47,7 +47,7 @@ MapObjectData mapObjectDataList[] =
 	nullptr,createUTurnTween},
 	{tileId_LargeEnemy, Rect(448,352,64,64),Rect(-32,-32,64,64),15,
 	nullptr,createSwayTween},
-	{tileId_Boss,Rect(320,128,128,256),Rect(-48,-112,96,224),200,
+	{tileId_Boss,Rect(320,128,128,256),Rect(-48,-112,96,224),100,
 	nullptr,createBossTween},
 };
 
@@ -127,21 +127,21 @@ TweenAnimation::TweenPtr createSwayTween()
 {
 	namespace TA = TweenAnimation;
 	TA::SequencePtr seq = TA::Sequence::Create(1);
-	seq->Add(TA::MoveBy::Create(2, glm::vec3(-200, 0, 0),
-		TA::EasingType::EaseOut));
-	seq->Add(TA::MoveBy::Create(1, glm::vec3(0, 100, 0),
-		TA::EasingType::EaseOut));
+	seq->Add(TA::MoveBy::Create(
+		2, glm::vec3(-200, 0, 0),TA::EasingType::EaseOut));
+	seq->Add(TA::MoveBy::Create(
+		1, glm::vec3(0, 100, 0),TA::EasingType::EaseOut));
 	for (int i = 0; i < 2; i++)
 	{
-		seq->Add(TA::MoveBy::Create(2, glm::vec3(0, -200, 0),
-			TA::EasingType::EaseInOut));
-		seq->Add(TA::MoveBy::Create(2, glm::vec3(0, 200, 0),
-			TA::EasingType::EaseInOut));
+		seq->Add(TA::MoveBy::Create(
+			2, glm::vec3(0, -200, 0),TA::EasingType::EaseInOut));
+		seq->Add(TA::MoveBy::Create(
+			2, glm::vec3(0, 200, 0),TA::EasingType::EaseInOut));
 	}
-	seq->Add(TA::MoveBy::Create(1, glm::vec3(0, -100, 0),
-		TA::EasingType::EaseInOut));
-	seq->Add(TA::MoveBy::Create(4, glm::vec3(-800, 0, 0),
-		TA::EasingType::EaseIn));
+	seq->Add(TA::MoveBy::Create(
+		1,glm::vec3(0, -100, 0),TA::EasingType::EaseInOut));
+	seq->Add(TA::MoveBy::Create(
+		4, glm::vec3(-800, 0, 0),TA::EasingType::EaseIn));
 	return seq;
 }
 
@@ -152,20 +152,41 @@ TweenAnimation::TweenPtr createBossTween()
 {
 	namespace TA = TweenAnimation;
 	TA::SequencePtr seq = TA::Sequence::Create(1);
-	seq->Add(TA::MoveBy::Create(2, glm::vec3(-200, 0, 0),
-		TA::EasingType::EaseOut));
-	seq->Add(TA::MoveBy::Create(1, glm::vec3(0, 100, 0),
-		TA::EasingType::EaseInOut));
-	for (int i = 0; i < 12; i++)
+	seq->Add(TA::MoveBy::Create(
+		3, glm::vec3(-350, 0, 0),TA::EasingType::EaseIn));
+	seq->Add(TA::MoveBy::Create(
+		2, glm::vec3(0, 150, 0),TA::EasingType::Linear));
+	seq->Add(TA::MoveBy::Create(
+		2, glm::vec3(0, -200, 0), TA::EasingType::EaseInOut));
+	seq->Add(TA::MoveBy::Create(
+		2, glm::vec3(200, 0, 0),TA::EasingType::EaseOut));
+
+	for (int i = 0; i < 3; i++)
 	{
-		seq->Add(TA::MoveBy::Create(2, glm::vec3(0, -200, 0),
-			TA::EasingType::EaseInOut));
-		seq->Add(TA::MoveBy::Create(2, glm::vec3(0, 200, 0),
-			TA::EasingType::EaseInOut));
+		seq->Add(TA::MoveBy::Create(
+			2, glm::vec3(0, 150, 0), TA::EasingType::EaseIn));
+		seq->Add(TA::MoveBy::Create(
+			2, glm::vec3(0, -100, 0), TA::EasingType::EaseInOut));
+		seq->Add(TA::MoveBy::Create(
+			2, glm::vec3(-150, 0, 0), TA::EasingType::Linear));
+		seq->Add(TA::MoveBy::Create(
+			2, glm::vec3(-100, 50, 0), TA::EasingType::EaseIn));
+		seq->Add(TA::MoveBy::Create(
+			2, glm::vec3(0, -100, 0), TA::EasingType::Linear));
+		seq->Add(TA::MoveBy::Create(
+			2, glm::vec3(150, 0, 0), TA::EasingType::EaseOut));
+		seq->Add(TA::MoveBy::Create(
+			2, glm::vec3(0, 100, 0), TA::EasingType::Linear));
+		seq->Add(TA::MoveBy::Create(
+			2, glm::vec3(0, -100, 0), TA::EasingType::EaseInOut));
+		seq->Add(TA::MoveBy::Create(
+			2, glm::vec3(-150, -80, 0), TA::EasingType::EaseIn));
+		seq->Add(TA::MoveBy::Create(
+			2, glm::vec3(0, 100, 0), TA::EasingType::Linear));
+		seq->Add(TA::MoveBy::Create(
+			2, glm::vec3(250, 0, 0), TA::EasingType::EaseIn));
 	}
-	seq->Add(TA::MoveBy::Create(1, glm::vec3(0, -100, 0),
-		TA::EasingType::EaseInOut));
-	seq->Add(TA::MoveBy::Create(4, glm::vec3(-800, -0, 0),
-		TA::EasingType::EaseIn));
+	seq->Add(TA::MoveBy::Create(
+		4, glm::vec3(-800, 0, 0),TA::EasingType::EaseIn));
 	return seq;
 }
