@@ -13,6 +13,7 @@ struct TitleScene
 {
 	Sprite bg;
 	Sprite logo;
+	Sprite Press;
 	Audio::SoundPtr titleBgm;
 	const int modeStart = 0;//タイトル表示待ちモード
 	const int modeTitle = 1;//入力受付モード
