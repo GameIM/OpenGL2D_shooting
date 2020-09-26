@@ -22,8 +22,28 @@ std::mt19937 random;//乱数を発生させる変数(乱数エンジン)
 SpriteRenderer renderer;//スプライト描画用変数
 FontRenderer fontRenderer;//フォント描画用変数
 Sprite sprBackground;//背景用スプライト
-//Sprite sprKeyPad;//操作説明用のスプライト
+Sprite sprHelp;//操作説明用のスプライト
+Sprite sprESC;//メイン画面用のスプライト
+Sprite sprKeypad;//キーパッドのスプライト
+Sprite sprBackMain;//メイン画面遷移用のスプライト
+Sprite sprS;//Sキー用のスプライト
+Sprite sprSpace;//スペース用のスプライト
+Sprite sprUp;//カーソルキー上用のスプライト
+Sprite sprDown;//カーソルキー下用のスプライト
+Sprite sprLeft;//カーソルキー右用のスプライト
+Sprite sprRight;//カーソルキー左用のスプライト
+Sprite sprRise;//メイン画面へのスプライト
 Actor sprPlayer;//自機用スプライト
+
+Sprite sprHand;//操作説明の文字スプライト
+Sprite sprWepon;//武器の切替の文字スプライト
+Sprite sprAttack;//攻撃用の文字スプライト
+Sprite sprCursors;//移動用の文字スプライト
+Sprite sprClear;//ステージクリア用の文字スプライト
+Sprite sprSos;//説明画面へ促す用の文字スプライト
+Sprite sprScore;//スコアの文字用スプライト
+Sprite sprNums[10];//スコアの0から9まで用の文字スプライト
+Sprite sprStageNum;//ステージ番号用の文字スプライト
 
 glm::vec3 playerVelocity;//自機の移動速度
 Actor playerBulletList[300];//自機の弾のリスト
@@ -42,7 +62,7 @@ const int weaponLevelMin = 1;//自機の武器強化の最低段階
 const int weaponLevelMax = 5;//自機の武器強化の最高段階
 int weaponLevel;//自機の武器強化段階
 
-const float maxHealth = 75;//自機の体力の最大値
+const float maxHealth = 50;//自機の体力の最大値
 
 const int weaponTypeWideShot = 0;//広範囲ショット
 const int weaponTypeLaser = 1;//レーザー
@@ -136,7 +156,7 @@ bool initialize(MainScene* scene)
 		Sprite("Res/Objects.png", glm::vec3(0, 0, 0), Rect(0, 0, 64, 32));
 	sprPlayer.collisionShape = Rect(-24, -8, 48, 16);
 	waitTime = 2.0f;
-	sprPlayer.health = 75;
+	sprPlayer.health = 50;
 	initializeActorList(std::begin(enemyList), std::end(enemyList));
 	initializeActorList(std::begin(playerBulletList), std::end(playerBulletList));
 	initializeActorList(std::begin(effectList), std::end(effectList));
@@ -147,7 +167,7 @@ bool initialize(MainScene* scene)
 
 	if (scene->stageNo == 1)
 	{
-		score = 0;
+		score = 00000000;
 		weaponLevel = weaponLevelMin;
 		weaponType = weaponTypeWideShot;
 	}
@@ -252,7 +272,6 @@ void processInput(GLFWEW::WindowRef window)
 		processInput(window, &gameOverScene);
 		return;
 	}
-
 	window.Update();
 
 	if (sprPlayer.health <= 0)
@@ -309,7 +328,7 @@ void processInput(GLFWEW::WindowRef window)
 
 		//弾の反射
 		if (weaponType == weaponTypeWideShot &&
-			(gamepad.buttons&GamePad::A  && shotTimer <= 0))
+			(gamepad.buttons&GamePad::A && shotTimer <= 0))
 		{
 			for (int i = 0; i < weaponLevel; i++)
 			{
@@ -362,6 +381,16 @@ void processInput(GLFWEW::WindowRef window)
 		{
 			stopPlayerLaser();
 		}
+		//もし場面がメイン画面かつPキーが押されたら
+		if ((gameState == gameStateMain) && (gamepad.buttonDown & GamePad::X))
+		{
+			gameState = gameStatePose;
+			sprHelp = Sprite("Res/Pose.png");
+		}
+		else if ((gameState == gameStatePose) && (gamepad.buttonDown & GamePad::ESC))
+		{
+			gameState = gameStateMain;
+		}
 	}
 	
 }
@@ -375,6 +404,19 @@ void update(GLFWEW::WindowRef window)
 {
 	const float deltaTime = window.DeltaTime();//前回の更新からの経過時間(秒)
 
+	//背景を動かす処理を作成する
+	// 背景の座標を取得する
+	glm::vec3 wallmove = sprBackground.Position();
+
+	// 取得した座標＋X方向に3ドット動かす
+	wallmove.x = wallmove.x - 0.03;
+
+	// 背景スプライトの座標に、取得した座標を設定する
+	sprBackground.Position(wallmove);
+
+	//設定した座標を反映する
+	sprBackground.Update(deltaTime);
+
 	if (gameState == gameStateTitle)
 	{
 		update(window, &titleScene);
@@ -382,6 +424,38 @@ void update(GLFWEW::WindowRef window)
 	}
 	else if (gameState == gameStateMain)
 	{
+		sprSos = Sprite("Res/Sos.png", glm::vec3(0,250,0));
+		sprScore = Sprite("Res/Score.png", glm::vec3(-90, 280, 0));
+		sprStageNum = Sprite("Res/StageNo.png", glm::vec3(-350,280,0));
+		/*
+		sprNums[0] = Sprite("Res/Num0.png",glm::vec3(-10,280,0));
+		sprNums[1] = Sprite("Res/Num0.png",glm::vec3(10,280,0));
+		sprNums[2] = Sprite("Res/Num0.png", glm::vec3(30, 280, 0));
+		sprNums[3] = Sprite("Res/Num0.png", glm::vec3(50, 280, 0));
+		sprNums[4] = Sprite("Res/Num0.png", glm::vec3(70, 280, 0));
+		sprNums[5] = Sprite("Res/Num0.png", glm::vec3(90, 280, 0));
+		sprNums[6] = Sprite("Res/Num0.png", glm::vec3(110, 280, 0));
+		sprNums[7] = Sprite("Res/Num0.png", glm::vec3(130, 280, 0));
+
+		if (score >= 100)//100点を取ったら
+		{
+			sprNums[0] = Sprite("Res/num1.png", glm::vec3(-10,280,0));
+			sprNums[1] = Sprite("Res/num0.png", glm::vec3(10,280,0));
+			sprNums[2] = Sprite("Res/num0.png", glm::vec3(30,280,0));
+		}
+		sprNums[0].Update(deltaTime);
+		sprNums[1].Update(deltaTime);
+		sprNums[2].Update(deltaTime);
+		sprNums[3].Update(deltaTime);
+		sprNums[4].Update(deltaTime);
+		sprNums[5].Update(deltaTime);
+		sprNums[6].Update(deltaTime);
+		sprNums[7].Update(deltaTime);
+		*/
+		sprSos.Update(deltaTime);
+		sprScore.Update(deltaTime);
+		sprStageNum.Update(deltaTime);
+
 		//自機が破壊されて3秒たったらゲームオーバー画面を表示する
 		// * waitTimerに3を設定
 		// * 自記が破壊されていたら
@@ -402,33 +476,63 @@ void update(GLFWEW::WindowRef window)
 			return;
 		}
 	}
+
+	//ポーズ画面の場合
+	else if (gameState == gameStatePose)
+	{
+		wallmove = glm::vec3(0, 0, 0);
+		sprBackground.Position(wallmove);
+		sprKeypad = Sprite("Res/Keypad.png",glm::vec3(0,20,0));
+		sprHand = Sprite("Res/Hand.png", glm::vec3(0, 260, 0));
+		sprBackMain = Sprite("Res/BackMain.png", glm::vec3(-130, 200, 0));
+		sprS = Sprite("Res/Skey.png", glm::vec3(-157,-30,0));
+		sprWepon = Sprite("Res/Wepon.png", glm::vec3(-240,-180,0));
+		sprSpace = Sprite("Res/Space.png", glm::vec3(-25,-105,0));
+		sprAttack = Sprite("Res/Attack.png", glm::vec3(60,-210,0));
+		sprUp = Sprite("Res/Cursors.png", glm::vec3(263,-60,0));
+		sprDown = Sprite("Res/Down.png", glm::vec3(260, -125, 0));
+		sprLeft = Sprite("Res/Cursors.png", glm::vec3(225,-100,0));
+		sprRight = Sprite("Res/Cursors.png", glm::vec3(302, -102, 0));
+		sprCursors = Sprite("Res/Move.png", glm::vec3(250, -170, 0));
+		sprRise = Sprite("Res/Rise.png", glm::vec3(-280, 90, 0));
+	
+		sprKeypad.Update(deltaTime);
+		sprHand.Update(deltaTime);
+		sprBackMain.Update(deltaTime);
+		sprS.Update(deltaTime);
+		sprWepon.Update(deltaTime);
+		sprSpace.Update(deltaTime);
+		sprAttack.Update(deltaTime);
+		sprUp.Update(deltaTime);
+		sprDown.Update(deltaTime);
+		sprLeft.Update(deltaTime);
+		sprRight.Update(deltaTime);
+		sprCursors.Update(deltaTime);
+		sprRise.Update(deltaTime);
+		return;
+	}
+
+	//ゲームオーバーの場合
 	else if (gameState == gameStateGameOver)
 	{
 		update(window, &gameOverScene);
 		return;
 	}
-	
-	//const float deltaTime = window.DeltaTime();//前回の更新からの経過時間(秒)
 
 	//ステージクリア判定
 	if (!isStagePassed && boss && (boss->health <= 0))
 	{
 		isStagePassed = true;
 		boss = nullptr;
-		timer = 2;
+		timer = 5;
 	}
-	/*
-	else if (boss->health >= 0)
-	{
-		bgm->Stop();
-		gameState = gameStateGameOver;
-	}
-	*/
 	if (isStagePassed)
 	{
+		sprClear = Sprite("Res/Clear.png", glm::vec3(0));;
 		timer -= deltaTime;
 		if (timer <= 0)
 		{
+			sprClear.Update(deltaTime);
 			bgm->Stop();//BGMを停止する
 			stopPlayerLaser();
 			++mainScene.stageNo;
@@ -471,14 +575,6 @@ void update(GLFWEW::WindowRef window)
 		{
 			shotTimer -= deltaTime;
 		}
-		/*
-		//得点に応じて自機の武器を強化する
-		weponLevel = weponLevelMin + score / 2000;
-		if (weponLevel > weponLevelMax)
-		{
-			weponLevel = weponLevelMax;
-		}
-		*/
 
 #if 1
 		generateObjectFromMap(deltaTime);
@@ -578,19 +674,6 @@ void update(GLFWEW::WindowRef window)
 			playerLaserList[0].spr.Position(posFiringPoint);
 		}
 
-		//背景を動かす処理を作成する
-		// 背景の座標を取得する
-		glm::vec3 wallmove = sprBackground.Position();
-
-		// 取得した座標＋X方向に3ドット動かす
-		wallmove.x = wallmove.x - 0.05;
-
-		// 背景スプライトの座標に、取得した座標を、設定する
-		sprBackground.Position(wallmove);
-
-		//設定した座標を反映する
-		sprBackground.Update(deltaTime);
-
 		//自機の弾と敵の衝突判定
 		detectCollision(std::begin(playerBulletList), std::end(playerBulletList),
 			std::begin(enemyList), std::end(enemyList),
@@ -649,51 +732,77 @@ void render(GLFWEW::WindowRef window)
 
 	renderer.BeginUpdate();
 	renderer.AddVertices(sprBackground);
-	if (sprPlayer.health > 0)
+	if (gameState == gameStatePose)
+	{
+		renderer.AddVertices(sprHelp);
+		renderer.AddVertices(sprESC);
+		renderer.AddVertices(sprKeypad);
+		renderer.AddVertices(sprHand);
+		renderer.AddVertices(sprBackMain);
+		renderer.AddVertices(sprS);
+		renderer.AddVertices(sprWepon);
+		renderer.AddVertices(sprSpace);
+		renderer.AddVertices(sprAttack);
+		renderer.AddVertices(sprUp);
+		renderer.AddVertices(sprDown);
+		renderer.AddVertices(sprLeft);
+		renderer.AddVertices(sprRight);
+		renderer.AddVertices(sprCursors);
+		renderer.AddVertices(sprRise);
+	}
+	else if (sprPlayer.health > 0)
 	{
 		renderer.AddVertices(sprPlayer.spr);
 	}
-	renderActorList(std::begin(enemyList) ,std::end(enemyList));
-	renderActorList(std::begin(playerBulletList), std::end(playerBulletList));
-	renderActorList(std::begin(effectList), std::end(effectList));
-	renderActorList(std::begin(itemList), std::end(itemList));
-	renderActorList(std::begin(healItemList), std::end(healItemList));
-	renderActorList(std::begin(playerLaserList), std::end(playerLaserList));
-	renderActorList(std::begin(enemyBulletList), std::end(enemyBulletList));
+	if(gameState == gameStateMain)
+	{
+		renderer.AddVertices(sprSos);
+		//renderer.AddVertices(sprScore);
+		/*
+		for (int i = 0; i < 8; i++)
+		{
+			renderer.AddVertices(sprNums[i]);
+		}
+		*/
+		renderer.AddVertices(sprStageNum);
+
+		renderActorList(std::begin(enemyList), std::end(enemyList));
+		renderActorList(std::begin(playerBulletList), std::end(playerBulletList));
+		renderActorList(std::begin(effectList), std::end(effectList));
+		renderActorList(std::begin(itemList), std::end(itemList));
+		renderActorList(std::begin(healItemList), std::end(healItemList));
+		renderActorList(std::begin(playerLaserList), std::end(playerLaserList));
+		renderActorList(std::begin(enemyBulletList), std::end(enemyBulletList));
+
+		if (isStagePassed)
+		{
+			renderer.AddVertices(sprClear);
+		}
+	}
 	renderer.EndUpdate();
 	renderer.Draw({ windowWidth,windowHeight });
 	
-
-	fontRenderer.BeginUpdate();
-	char str[64];
-	snprintf(str, sizeof(str), "SCORE:%08d", score);
-	fontRenderer.AddString(glm::vec2(-130, 300), str);
-	snprintf(str, sizeof(str), "体力:%0.0f/%0.0f", sprPlayer.health,75.0f);
-	fontRenderer.Color(glm::vec4(0.2f, 0.7f, 0.2f, 1));
-	fontRenderer.Scale(glm::vec2(0.7f, 0.7f));
-	fontRenderer.AddString(glm::vec2(210, 280), str);
-	fontRenderer.Scale(glm::vec2(0.6f, 0.6f));
-	fontRenderer.AddString(glm::vec2(-390,280), "上下左右キー:移動");
-	fontRenderer.AddString(glm::vec2(-390,260), "SPACEキー:攻撃");
-	fontRenderer.AddString(glm::vec2(-390,240), "Sキー:武器切り替え");
-
-	snprintf(str, sizeof(str), "STAGE: %02d", mainScene.stageNo);
-	fontRenderer.Scale(glm::vec2(0.4f, 0.4f));
-	fontRenderer.Color(glm::vec4(0.75f, 0.75f, 1, 1));
-	fontRenderer.Thickness(0);
-	fontRenderer.AddString(glm::vec2(-384, 300), str);
-	fontRenderer.Scale(glm::vec2(1, 1));
-	fontRenderer.Color(glm::vec4(1, 1, 1, 1));
-	fontRenderer.Thickness(0.33f);
-
-	if (isStagePassed)
+	if (gameState == gameStateMain)
 	{
-		fontRenderer.AddString(glm::vec2(-100, 32), "STAGE CLEAR!");
+		fontRenderer.BeginUpdate();
+		char str[64];
+		snprintf(str, sizeof(str), "SCORE:");
+		fontRenderer.Scale(glm::vec2(1.0f));
+		fontRenderer.AddString(glm::vec2(-140, 300),str);
+		snprintf(str, sizeof(str), "%08d", score);
+		fontRenderer.Scale(glm::vec2(1.0f));
+		fontRenderer.AddString(glm::vec2(-30, 300), str);
+		snprintf(str, sizeof(str), "体力:%0.0f/%0.0f", sprPlayer.health, 50.0f);
+		fontRenderer.Scale(glm::vec2(0.7f, 0.7f));
+		fontRenderer.AddString(glm::vec2(210, 280), str);
+		fontRenderer.Scale(glm::vec2(0.6f, 0.6f));
+		fontRenderer.EndUpdate();
+		fontRenderer.Draw();
 	}
-	fontRenderer.EndUpdate();
-	fontRenderer.Draw();
-
 	window.SwapBuffers();
+
+	
+	
 }
 
 /**
@@ -751,7 +860,18 @@ void playerBulletAndEnemyContactHandler(Actor* bullet, Actor* enemy)
 
 	if (enemy->health <= 0)
 	{
-		score += 100;//敵を破壊したら得点を増やす
+		/*
+		int maxScore = score;
+		if (maxScore > 99999999)
+		{
+			maxScore = 99999999;
+		}
+		*/
+		if (score <= 0)
+		{
+			score = 0;
+		}
+			score += 100;//敵を破壊したら得点を増やす
 		Actor* blast = findAvailableActor(
 			std::begin(effectList), std::end(effectList));
 
@@ -811,11 +931,11 @@ void playerBulletAndEnemyContactHandler(Actor* bullet, Actor* enemy)
 				}
 				if (enemy->id == tileId_LargeEnemy)
 				{
-					blast->spr.Scale(glm::vec2(3));
+					blast->spr.Scale(glm::vec2(4));
 				}
 				else
 				{
-					blast->spr.Scale(glm::vec2(1));
+					blast->spr.Scale(glm::vec2(2));
 				}
 				seBlast->Play();
 			}
@@ -838,11 +958,18 @@ void playerAndEnemyBulletContactHandler(Actor* player, Actor* bullet)
 
 	if (player->health >= 0)
 	{
-		score -= 50;//敵の弾に衝突したらスコアを減らす
+		/*
+		int maxScore = score;
+		if (maxScore > 99999999)
+		{
+			maxScore = 99999999;
+		}
+		*/
 		if (score <= 0)
 		{
 			score = 0;
 		}
+			score -= 50;//敵の弾に衝突したらスコアを減らす
 		Actor* blast = findAvailableActor(
 			std::begin(effectList), std::end(effectList));
 		if (blast != nullptr)
@@ -917,11 +1044,11 @@ void playerLaserAndEnemyContactHandler(Actor* laser, Actor* enemy)
 				}
 				if (enemy->id == tileId_LargeEnemy)
 				{
-					blast->spr.Scale(glm::vec2(3));
+					blast->spr.Scale(glm::vec2(4));
 				}
 				else
 				{
-					blast->spr.Scale(glm::vec2(1));
+					blast->spr.Scale(glm::vec2(2));
 				}
 				seBlast->Play();//爆発音を再生
 			}
@@ -956,11 +1083,11 @@ void playerAndEnemyContactHandler(Actor* player, Actor* enemy)
 		{
 			if (enemy->id == tileId_LargeEnemy)
 			{
-				blast->spr.Scale(glm::vec2(3));
+				blast->spr.Scale(glm::vec2(4));
 			}
 			else
 			{
-				blast->spr.Scale(glm::vec2(1));
+				blast->spr.Scale(glm::vec2(2));
 			}
 			seBlast->Play();
 		}
@@ -1241,27 +1368,6 @@ void updateEnemies(float deltaTime)
 		if (i->id == tileId_Boss)
 		{
 			{
-				//緑の弾を射出する処理を作成する(扇型)
-				for (int j = 1; j < 15; j++)
-				{
-					Actor* bossBullet = findAvailableActor(
-						std::begin(enemyBulletList), std::end(enemyBulletList));
-					if (bossBullet != nullptr)
-					{
-						glm::vec3 bossPos = i->spr.Position();
-						bossBullet->spr =
-							Sprite("Res/Objects.png", bossPos, Rect(448, 0, 16, 16));
-						namespace TA = TweenAnimation;
-						TA::SequencePtr seq = TA::Sequence::Create(1);
-						seq->Add(TA::MoveBy::Create(
-							15.0f / j, glm::vec3(-1000, 800, 0), TA::EasingType::Linear));
-						bossBullet->spr.Tweener(TA::Animate::Create(seq));
-						bossBullet->collisionShape = Rect(-4, -4, 8, 8);
-						bossBullet->health = 1;
-					}
-				}
-			}
-			{
 				//緑の弾を射出する処理を作成する
 				for (int j = 1; j < 15; j++)
 				{
@@ -1273,9 +1379,12 @@ void updateEnemies(float deltaTime)
 						bossBullet->spr =
 							Sprite("Res/Objects.png", bossPos, Rect(448, 0, 16, 16));
 						namespace TA = TweenAnimation;
-						TA::SequencePtr seq = TA::Sequence::Create(1);
+						TA::SequencePtr seq = TA::Sequence::Create(3);
 						seq->Add(TA::MoveBy::Create(
-							15.0f / j, glm::vec3(-1000, 600, 0), TA::EasingType::Linear));
+							1.5f, glm::vec3(0, 0, 0), TA::EasingType::Linear));
+						seq->Add(TA::Wait::Create(0.1f * j));
+						seq->Add(TA::MoveBy::Create(
+							3.0f , glm::vec3(-1000, 800, 0), TA::EasingType::Linear));
 						bossBullet->spr.Tweener(TA::Animate::Create(seq));
 						bossBullet->collisionShape = Rect(-4, -4, 8, 8);
 						bossBullet->health = 1;
@@ -1284,7 +1393,7 @@ void updateEnemies(float deltaTime)
 			}
 			{
 				//緑の弾を射出する処理を作成する
-				for (int j = 1; j < 15; j++)
+				for (int j = 1; j < 16; j++)
 				{
 					Actor* bossBullet = findAvailableActor(
 						std::begin(enemyBulletList), std::end(enemyBulletList));
@@ -1294,9 +1403,12 @@ void updateEnemies(float deltaTime)
 						bossBullet->spr =
 							Sprite("Res/Objects.png", bossPos, Rect(448, 0, 16, 16));
 						namespace TA = TweenAnimation;
-						TA::SequencePtr seq = TA::Sequence::Create(1);
+						TA::SequencePtr seq = TA::Sequence::Create(3);
 						seq->Add(TA::MoveBy::Create(
-							15.0f / j, glm::vec3(-1000, 400, 0), TA::EasingType::Linear));
+							1.5f, glm::vec3(0, -20, 0), TA::EasingType::Linear));
+						seq->Add(TA::Wait::Create(0.1f * j));
+						seq->Add(TA::MoveBy::Create(
+							3.0f, glm::vec3(-1000, 600, 0), TA::EasingType::Linear));
 						bossBullet->spr.Tweener(TA::Animate::Create(seq));
 						bossBullet->collisionShape = Rect(-4, -4, 8, 8);
 						bossBullet->health = 1;
@@ -1305,7 +1417,7 @@ void updateEnemies(float deltaTime)
 			}
 			{
 				//緑の弾を射出する処理を作成する
-				for (int j = 1; j < 15; j++)
+				for (int j = 1; j < 16; j++)
 				{
 					Actor* bossBullet = findAvailableActor(
 						std::begin(enemyBulletList), std::end(enemyBulletList));
@@ -1315,9 +1427,12 @@ void updateEnemies(float deltaTime)
 						bossBullet->spr =
 							Sprite("Res/Objects.png", bossPos, Rect(448, 0, 16, 16));
 						namespace TA = TweenAnimation;
-						TA::SequencePtr seq = TA::Sequence::Create(1);
+						TA::SequencePtr seq = TA::Sequence::Create(3);
 						seq->Add(TA::MoveBy::Create(
-							15.0f / j, glm::vec3(-1000, 200, 0), TA::EasingType::Linear));
+							1.5f, glm::vec3(0, -40, 0), TA::EasingType::Linear));
+						seq->Add(TA::Wait::Create(0.1f * j));
+						seq->Add(TA::MoveBy::Create(
+							3.0f, glm::vec3(-1000, 400, 0), TA::EasingType::Linear));
 						bossBullet->spr.Tweener(TA::Animate::Create(seq));
 						bossBullet->collisionShape = Rect(-4, -4, 8, 8);
 						bossBullet->health = 1;
@@ -1326,7 +1441,7 @@ void updateEnemies(float deltaTime)
 			}
 			{
 				//緑の弾を射出する処理を作成する
-				for (int j = 1; j < 15; j++)
+				for (int j = 1; j < 16; j++)
 				{
 					Actor* bossBullet = findAvailableActor(
 						std::begin(enemyBulletList), std::end(enemyBulletList));
@@ -1336,9 +1451,12 @@ void updateEnemies(float deltaTime)
 						bossBullet->spr =
 							Sprite("Res/Objects.png", bossPos, Rect(448, 0, 16, 16));
 						namespace TA = TweenAnimation;
-						TA::SequencePtr seq = TA::Sequence::Create(1);
+						TA::SequencePtr seq = TA::Sequence::Create(3);
 						seq->Add(TA::MoveBy::Create(
-							15.0f / j, glm::vec3(-1000, 0, 0), TA::EasingType::Linear));
+							1.5f, glm::vec3(0, -60, 0), TA::EasingType::Linear));
+						seq->Add(TA::Wait::Create(0.1f * j));
+						seq->Add(TA::MoveBy::Create(
+							3.0f, glm::vec3(-1000, 200, 0), TA::EasingType::Linear));
 						bossBullet->spr.Tweener(TA::Animate::Create(seq));
 						bossBullet->collisionShape = Rect(-4, -4, 8, 8);
 						bossBullet->health = 1;
@@ -1347,7 +1465,7 @@ void updateEnemies(float deltaTime)
 			}
 			{
 				//緑の弾を射出する処理を作成する
-				for (int j = 1; j < 15; j++)
+				for (int j = 1; j < 16; j++)
 				{
 					Actor* bossBullet = findAvailableActor(
 						std::begin(enemyBulletList), std::end(enemyBulletList));
@@ -1357,9 +1475,12 @@ void updateEnemies(float deltaTime)
 						bossBullet->spr =
 							Sprite("Res/Objects.png", bossPos, Rect(448, 0, 16, 16));
 						namespace TA = TweenAnimation;
-						TA::SequencePtr seq = TA::Sequence::Create(1);
+						TA::SequencePtr seq = TA::Sequence::Create(3);
 						seq->Add(TA::MoveBy::Create(
-							15.0f / j, glm::vec3(-1000, -200, 0), TA::EasingType::Linear));
+							1.5f, glm::vec3(0, -80, 0), TA::EasingType::Linear));
+						seq->Add(TA::Wait::Create(0.1f * j));
+						seq->Add(TA::MoveBy::Create(
+							3.0f, glm::vec3(-1000, 0, 0), TA::EasingType::Linear));
 						bossBullet->spr.Tweener(TA::Animate::Create(seq));
 						bossBullet->collisionShape = Rect(-4, -4, 8, 8);
 						bossBullet->health = 1;
@@ -1368,7 +1489,7 @@ void updateEnemies(float deltaTime)
 			}
 			{
 				//緑の弾を射出する処理を作成する
-				for (int j = 1; j < 15; j++)
+				for (int j = 1; j < 16; j++)
 				{
 					Actor* bossBullet = findAvailableActor(
 						std::begin(enemyBulletList), std::end(enemyBulletList));
@@ -1378,9 +1499,12 @@ void updateEnemies(float deltaTime)
 						bossBullet->spr =
 							Sprite("Res/Objects.png", bossPos, Rect(448, 0, 16, 16));
 						namespace TA = TweenAnimation;
-						TA::SequencePtr seq = TA::Sequence::Create(1);
+						TA::SequencePtr seq = TA::Sequence::Create(3);
 						seq->Add(TA::MoveBy::Create(
-							15.0f / j, glm::vec3(-1000, -400, 0), TA::EasingType::Linear));
+							1.5f, glm::vec3(0, -100, 0), TA::EasingType::Linear));
+						seq->Add(TA::Wait::Create(0.1f * j));
+						seq->Add(TA::MoveBy::Create(
+							3.0f, glm::vec3(-1000, -200, 0), TA::EasingType::Linear));
 						bossBullet->spr.Tweener(TA::Animate::Create(seq));
 						bossBullet->collisionShape = Rect(-4, -4, 8, 8);
 						bossBullet->health = 1;
@@ -1389,7 +1513,7 @@ void updateEnemies(float deltaTime)
 			}
 			{
 				//緑の弾を射出する処理を作成する
-				for (int j = 1; j < 15; j++)
+				for (int j = 1; j < 16; j++)
 				{
 					Actor* bossBullet = findAvailableActor(
 						std::begin(enemyBulletList), std::end(enemyBulletList));
@@ -1399,9 +1523,36 @@ void updateEnemies(float deltaTime)
 						bossBullet->spr =
 							Sprite("Res/Objects.png", bossPos, Rect(448, 0, 16, 16));
 						namespace TA = TweenAnimation;
-						TA::SequencePtr seq = TA::Sequence::Create(1);
+						TA::SequencePtr seq = TA::Sequence::Create(3);
 						seq->Add(TA::MoveBy::Create(
-							15.0f / j, glm::vec3(-1000, -600, 0), TA::EasingType::Linear));
+							1.5f, glm::vec3(0, -120, 0), TA::EasingType::Linear));
+						seq->Add(TA::Wait::Create(0.1f * j));
+						seq->Add(TA::MoveBy::Create(
+							3.0f, glm::vec3(-1000, -400, 0), TA::EasingType::Linear));
+						bossBullet->spr.Tweener(TA::Animate::Create(seq));
+						bossBullet->collisionShape = Rect(-4, -4, 8, 8);
+						bossBullet->health = 1;
+					}
+				}
+			}
+			{
+				//緑の弾を射出する処理を作成する
+				for (int j = 1; j < 16; j++)
+				{
+					Actor* bossBullet = findAvailableActor(
+						std::begin(enemyBulletList), std::end(enemyBulletList));
+					if (bossBullet != nullptr)
+					{
+						glm::vec3 bossPos = i->spr.Position();
+						bossBullet->spr =
+							Sprite("Res/Objects.png", bossPos, Rect(448, 0, 16, 16));
+						namespace TA = TweenAnimation;
+						TA::SequencePtr seq = TA::Sequence::Create(3);
+						seq->Add(TA::MoveBy::Create(
+							1.5f, glm::vec3(0, -140, 0), TA::EasingType::Linear));
+						seq->Add(TA::Wait::Create(0.1f * j));
+						seq->Add(TA::MoveBy::Create(
+							3.0f, glm::vec3(-1000, -600, 0), TA::EasingType::Linear));
 						bossBullet->spr.Tweener(TA::Animate::Create(seq));
 						bossBullet->collisionShape = Rect(-4, -4, 8, 8);
 						bossBullet->health = 1;
@@ -1419,33 +1570,35 @@ void updateEnemies(float deltaTime)
 						Sprite("Res/Objects.png", bossPos, Rect(448, 48, 32, 16));
 					bossBulletBlue->spr.Scale(glm::vec2(3, 1));
 					namespace TA = TweenAnimation;
-					TA::SequencePtr seq = TA::Sequence::Create(13);
+					TA::SequencePtr seq = TA::Sequence::Create(14);
 					seq->Add(TA::MoveBy::Create(
-						0.5, glm::vec3(-100, 0, 0), TA::EasingType::Linear));
+						0.3f, glm::vec3(0, 0, 0), TA::EasingType::Linear));
+					seq->Add(TA::MoveBy::Create(
+						0.3f, glm::vec3(-100, 0, 0), TA::EasingType::Linear));
 					seq->Add(
 						TA::Rotation::Create(0.1f, 1.0f,TA::EasingType::Linear));
 					seq->Add(TA::MoveBy::Create(
-						0.5, glm::vec3(-100, -50, 0), TA::EasingType::Linear));
+						0.3f, glm::vec3(-100, -50, 0), TA::EasingType::Linear));
 					seq->Add(
 						TA::Rotation::Create(0.1f, -1.0f, TA::EasingType::Linear));
 					seq->Add(TA::MoveBy::Create(
-						0.5, glm::vec3(-100, 0, 0), TA::EasingType::Linear));
+						0.3f, glm::vec3(-100, 0, 0), TA::EasingType::Linear));
 					seq->Add(
 						TA::Rotation::Create(0.1f, -1.0f, TA::EasingType::Linear));
 					seq->Add(TA::MoveBy::Create(
-						0.5, glm::vec3(-100, 100, 0), TA::EasingType::Linear));
+						0.3f, glm::vec3(-100, 100, 0), TA::EasingType::Linear));
 					seq->Add(
 						TA::Rotation::Create(0.1f, 1.0f, TA::EasingType::Linear));
 					seq->Add(TA::MoveBy::Create(
-						0.5, glm::vec3(-50, 0, 0), TA::EasingType::Linear));
+						0.3f, glm::vec3(-50, 0, 0), TA::EasingType::Linear));
 					seq->Add(
 						TA::Rotation::Create(0.1f, 1.0f, TA::EasingType::Linear));
 					seq->Add(TA::MoveBy::Create(
-						0.5, glm::vec3(-100, -50, 0), TA::EasingType::Linear));
+						0.3f, glm::vec3(-100, -50, 0), TA::EasingType::Linear));
 					seq->Add(
 						TA::Rotation::Create(0.1f, -1.0f, TA::EasingType::Linear));
 					seq->Add(TA::MoveBy::Create(
-						0.5, glm::vec3(-100, 0, 0), TA::EasingType::Linear));
+						0.3f, glm::vec3(-100, 0, 0), TA::EasingType::Linear));
 
 					bossBulletBlue->spr.Tweener(TA::Animate::Create(seq));
 					bossBulletBlue->collisionShape = Rect(-4, -4, 8, 8);
@@ -1463,33 +1616,35 @@ void updateEnemies(float deltaTime)
 						Sprite("Res/Objects.png", bossPos, Rect(448, 48, 32, 16));
 					bossBulletBlue->spr.Scale(glm::vec2(3, 1));
 					namespace TA = TweenAnimation;
-					TA::SequencePtr seq = TA::Sequence::Create(13);
+					TA::SequencePtr seq = TA::Sequence::Create(14);
 					seq->Add(TA::MoveBy::Create(
-						0.5, glm::vec3(-100, 0, 0), TA::EasingType::Linear));
+						0.3f, glm::vec3(0, 0, 0), TA::EasingType::Linear));
+					seq->Add(TA::MoveBy::Create(
+						0.3f, glm::vec3(-100, 0, 0), TA::EasingType::Linear));
 					seq->Add(
 						TA::Rotation::Create(0.1f, -1.0f, TA::EasingType::Linear));
 					seq->Add(TA::MoveBy::Create(
-						0.5, glm::vec3(-100, 50, 0), TA::EasingType::Linear));
+						0.3f, glm::vec3(-100, 50, 0), TA::EasingType::Linear));
 					seq->Add(
 						TA::Rotation::Create(0.1f, 1.0f, TA::EasingType::Linear));
 					seq->Add(TA::MoveBy::Create(
-						0.5, glm::vec3(-100, 0, 0), TA::EasingType::Linear));
+						0.3f, glm::vec3(-100, 0, 0), TA::EasingType::Linear));
 					seq->Add(
 						TA::Rotation::Create(0.1f, 1.0f, TA::EasingType::Linear));
 					seq->Add(TA::MoveBy::Create(
-						0.5, glm::vec3(-100, -50, 0), TA::EasingType::Linear));
+						0.3f, glm::vec3(-100, -50, 0), TA::EasingType::Linear));
 					seq->Add(
 						TA::Rotation::Create(0.1f, -1.0f, TA::EasingType::Linear));
 					seq->Add(TA::MoveBy::Create(
-						0.5, glm::vec3(-50, 0, 0), TA::EasingType::Linear));
+						0.3f, glm::vec3(-50, 0, 0), TA::EasingType::Linear));
 					seq->Add(
 						TA::Rotation::Create(0.1f, -1.0f, TA::EasingType::Linear));
 					seq->Add(TA::MoveBy::Create(
-						0.5, glm::vec3(-100, 50, 0), TA::EasingType::Linear));
+						0.3f, glm::vec3(-100, 50, 0), TA::EasingType::Linear));
 					seq->Add(
 						TA::Rotation::Create(0.1f, 1.0f, TA::EasingType::Linear));
 					seq->Add(TA::MoveBy::Create(
-						0.5, glm::vec3(-50, 0, 0), TA::EasingType::Linear));
+						0.3f, glm::vec3(-50, 0, 0), TA::EasingType::Linear));
 					bossBulletBlue->spr.Tweener(TA::Animate::Create(seq));
 					bossBulletBlue->collisionShape = Rect(-4, -4, 8, 8);
 					bossBulletBlue->health = 5;
@@ -1497,7 +1652,7 @@ void updateEnemies(float deltaTime)
 			}
 			{
 				//赤の弾を射出する処理を作成する
-				for (int h = 1; h < 7; h++)
+				for (int h = 1; h < 8; h++)
 				{
 					Actor* bossBulletRed = findAvailableActor(
 						std::begin(enemyBulletList), std::end(enemyBulletList));
@@ -1508,13 +1663,19 @@ void updateEnemies(float deltaTime)
 							Sprite("Res/Objects.png", bossPos, Rect(464, 0, 16, 16));
 						bossBulletRed->spr.Scale(glm::vec2(2, 1));
 						namespace TA = TweenAnimation;
-						TA::SequencePtr seq = TA::Sequence::Create(2);
+						TA::SequencePtr seq = TA::Sequence::Create(6);
 						seq->Add(TA::MoveBy::Create(
-							8.0f / h, glm::vec3(-350, 0, 0), TA::EasingType::Linear));
+							0.5f, glm::vec3(0, 0, 0), TA::EasingType::Linear));
+						seq->Add(TA::Wait::Create(0.1f * h));
+						seq->Add(TA::MoveBy::Create(
+							1.5f, glm::vec3(-350 , 0, 0), TA::EasingType::Linear));
+						seq->Add(TA::MoveBy::Create(
+							0.8f, glm::vec3(0, 0, 0), TA::EasingType::Linear));
 						seq->Add(
 							TA::Rotation::Create(0.1f, 1.5f, TA::EasingType::Linear));
 						seq->Add(TA::MoveBy::Create(
-							5.0f / h, glm::vec3(-100, -500, 0), TA::EasingType::Linear));
+							3.0f, glm::vec3(-100 , -500 , 0), TA::EasingType::Linear));
+
 						bossBulletRed->spr.Tweener(TA::Animate::Create(seq));
 						bossBulletRed->collisionShape = Rect(-4, -4, 8, 8);
 						bossBulletRed->health = 3;
@@ -1534,9 +1695,12 @@ void updateEnemies(float deltaTime)
 							Sprite("Res/Objects.png", bossPos, Rect(464, 0, 16, 16));
 						bossBulletRed->spr.Scale(glm::vec2(2, 1));
 						namespace TA = TweenAnimation;
-						TA::SequencePtr seq = TA::Sequence::Create(1);
+						TA::SequencePtr seq = TA::Sequence::Create(3);
 						seq->Add(TA::MoveBy::Create(
-							8.0f / h, glm::vec3(-1000, 0, 0), TA::EasingType::Linear));
+							1.0f, glm::vec3(-10, 0, 0), TA::EasingType::Linear));
+						seq->Add(TA::Wait::Create(0.1f * h));
+						seq->Add(TA::MoveBy::Create(
+							2.5f, glm::vec3(-1000, 0, 0), TA::EasingType::Linear));
 						bossBulletRed->spr.Tweener(TA::Animate::Create(seq));
 						bossBulletRed->collisionShape = Rect(-4, -4, 8, 8);
 						bossBulletRed->health = 3;
@@ -1545,7 +1709,7 @@ void updateEnemies(float deltaTime)
 			}
 			{
 				//赤の弾を射出する処理を作成する
-				for (int h = 1; h < 7; h++)
+				for (int h = 1; h < 8; h++)
 				{
 					Actor* bossBulletRed = findAvailableActor(
 						std::begin(enemyBulletList), std::end(enemyBulletList));
@@ -1556,13 +1720,18 @@ void updateEnemies(float deltaTime)
 							Sprite("Res/Objects.png", bossPos, Rect(464, 0, 16, 16));
 						bossBulletRed->spr.Scale(glm::vec2(2, 1));
 						namespace TA = TweenAnimation;
-						TA::SequencePtr seq = TA::Sequence::Create(3);
+						TA::SequencePtr seq = TA::Sequence::Create(6);
 						seq->Add(TA::MoveBy::Create(
-							8.0f / h, glm::vec3(-300, 0, 0), TA::EasingType::Linear));
+							0.5f, glm::vec3(0, 0, 0), TA::EasingType::Linear));
+						seq->Add(TA::Wait::Create(0.1f * h));
+						seq->Add(TA::MoveBy::Create(
+							1.5f, glm::vec3(-300, 0, 0), TA::EasingType::Linear));
+						seq->Add(TA::MoveBy::Create(
+							0.8f, glm::vec3(0, 0, 0), TA::EasingType::Linear));
 						seq->Add(
 							TA::Rotation::Create(0.1, -1.5, TA::EasingType::Linear));
 						seq->Add(TA::MoveBy::Create(
-							5.0f / h, glm::vec3(-100, 600, 0), TA::EasingType::Linear));
+							3.0f, glm::vec3(-100, 600, 0), TA::EasingType::Linear));
 						bossBulletRed->spr.Tweener(TA::Animate::Create(seq));
 						bossBulletRed->collisionShape = Rect(-4, -4, 8, 8);
 						bossBulletRed->health = 3;
@@ -1582,9 +1751,12 @@ void updateEnemies(float deltaTime)
 							Sprite("Res/Objects.png", bossPos, Rect(464, 0, 16, 16));
 						bossBulletRed->spr.Scale(glm::vec2(2, 1));
 						namespace TA = TweenAnimation;
-						TA::SequencePtr seq = TA::Sequence::Create(1);
+						TA::SequencePtr seq = TA::Sequence::Create(3);
 						seq->Add(TA::MoveBy::Create(
-							8.0f / h, glm::vec3(-1000, 0, 0), TA::EasingType::Linear));
+							1.0f, glm::vec3(0, 0, 0), TA::EasingType::Linear));
+						seq->Add(TA::Wait::Create(0.1f * h));
+						seq->Add(TA::MoveBy::Create(
+							2.5f, glm::vec3(-1000, 0, 0), TA::EasingType::Linear));
 						bossBulletRed->spr.Tweener(TA::Animate::Create(seq));
 						bossBulletRed->collisionShape = Rect(-4, -4, 8, 8);
 						bossBulletRed->health = 3;

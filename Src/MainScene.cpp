@@ -47,7 +47,7 @@ MapObjectData mapObjectDataList[] =
 	nullptr,createUTurnTween},
 	{tileId_LargeEnemy, Rect(448,352,64,64),Rect(-32,-32,64,64),15,
 	nullptr,createSwayTween},
-	{tileId_Boss,Rect(320,128,128,256),Rect(-48,-112,96,224),100,
+	{tileId_Boss,Rect(320,128,128,256),Rect(-48,-112,96,224),130,
 	nullptr,createBossTween},
 };
 

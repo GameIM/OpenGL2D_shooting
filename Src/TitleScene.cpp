@@ -21,6 +21,7 @@ bool initialize(TitleScene* scene)
 	scene->titleBgm->Play(Audio::Flag_Loop);
 	scene->bg = Sprite("Res/UnknownPlanet.png");
 	scene->logo = Sprite("Res/Title_S.png", glm::vec3(0, 100, 0));
+	scene->Press = Sprite("Res/Enter.png", glm::vec3(-10,-140,0));
 	scene->mode = scene->modeStart;
 	scene->timer = 0.5f;//入力を受け付けない時間(秒)
 	return true;
@@ -74,6 +75,7 @@ void update(GLFWEW::WindowRef window, TitleScene* scene)
 
 	scene->bg.Update(deltaTime);
 	scene->logo.Update(deltaTime);
+	scene->Press.Update(deltaTime);
 
 	//タイマーが0以下になるまでカウントダウン
 	if (scene->timer > 0)
@@ -109,25 +111,19 @@ void render(GLFWEW::WindowRef window, TitleScene* scene)
 	renderer.BeginUpdate();
 	renderer.AddVertices(scene->bg);
 	renderer.AddVertices(scene->logo);
-	renderer.EndUpdate();
-	renderer.Draw(glm::vec2(windowWidth, windowHeight));
-
-	fontRenderer.BeginUpdate();
 	if (scene->mode == scene->modeTitle)
 	{
-		fontRenderer.AddString(glm::vec2(-120, -100), "PRESS ENTER");
+		renderer.AddVertices(scene->Press);
 	}
 	else if (scene->mode == scene->modeNextState)
 	{
-		//ゲーム開始待ちのときは文字を点滅させる
 		if ((int)(scene->timer * 10) % 2)
 		{
-			fontRenderer.AddString(glm::vec2(-120, -100), "PRESS ENTER");
+			renderer.AddVertices(scene->Press);
 		}
 	}
-	fontRenderer.EndUpdate();
-	fontRenderer.Draw();
-
+	renderer.EndUpdate();
+	renderer.Draw(glm::vec2(windowWidth, windowHeight));
 	window.SwapBuffers();
 }
 
