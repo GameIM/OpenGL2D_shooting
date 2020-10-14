@@ -33,6 +33,7 @@
     <ClCompile Include="Lib\Easy\TweenAnimation.cpp" />
     <ClCompile Include="Lib\Easy\UniformBuffer.cpp" />
     <ClCompile Include="Src\Actor.cpp" />
+    <ClCompile Include="Src\GameClearScene.cpp" />
     <ClCompile Include="Src\GameOverScene.cpp" />
     <ClCompile Include="Src\Main.cpp" />
     <ClCompile Include="Src\MainScene.cpp" />
@@ -55,6 +56,7 @@
     <ClInclude Include="Lib\Easy\TweenAnimation.h" />
     <ClInclude Include="Lib\Easy\UniformBuffer.h" />
     <ClInclude Include="Src\Actor.h" />
+    <ClInclude Include="Src\GameClearScene.h" />
     <ClInclude Include="Src\GameData.h" />
     <ClInclude Include="Src\GameOverScene.h" />
     <ClInclude Include="Src\MainScene.h" />
@@ -166,8 +168,8 @@ if not exist "$(TargetDir)glew32d.dll" (
   robocopy "$(ProjectDir)Lib\glfw-3.2.1\lib\$(ConfigurationName)\$(PlatformName)" "$(TargetDir)\" glfw3.dll
   if %errorlevel% lss 8 time /t &gt; nul
 )
-if not exist "$(TargetDir)glew32d.dll" (
-  robocopy "$(ProjectDir)Lib\glew-2.1.0\lib\$(ConfigurationName)\$(PlatformName)" "$(TargetDir)\" glew32d.dll
+if not exist "$(TargetDir)glew32.dll" (
+  robocopy "$(ProjectDir)Lib\glew-2.1.0\lib\$(ConfigurationName)\$(PlatformName)" "$(TargetDir)\" glew32.dll
   if %errorlevel% lss 8 time /t &gt; nul
 )</Command>
     </PostBuildEvent>

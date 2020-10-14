@@ -3,6 +3,7 @@
 */
 #include "MainScene.h"
 #include "TitleScene.h"
+#include "GameClearScene.h"
 #include "GameOverScene.h"
 #include "GameData.h"
 #include "Actor.h"
@@ -21,18 +22,20 @@ std::mt19937 random;//乱数を発生させる変数(乱数エンジン)
 
 SpriteRenderer renderer;//スプライト描画用変数
 FontRenderer fontRenderer;//フォント描画用変数
+
 Sprite sprBackground;//背景用スプライト
 Sprite sprHelp;//操作説明用のスプライト
 Sprite sprESC;//メイン画面用のスプライト
 Sprite sprKeypad;//キーパッドのスプライト
 Sprite sprBackMain;//メイン画面遷移用のスプライト
-Sprite sprS;//Sキー用のスプライト
+Sprite sprSkey;//Sキー用のスプライト
 Sprite sprSpace;//スペース用のスプライト
 Sprite sprUp;//カーソルキー上用のスプライト
 Sprite sprDown;//カーソルキー下用のスプライト
 Sprite sprLeft;//カーソルキー右用のスプライト
 Sprite sprRight;//カーソルキー左用のスプライト
 Sprite sprRise;//メイン画面へのスプライト
+Sprite sprNumData[8];//8桁のスプライト
 Actor sprPlayer;//自機用スプライト
 
 Sprite sprHand;//操作説明の文字スプライト
@@ -42,17 +45,18 @@ Sprite sprCursors;//移動用の文字スプライト
 Sprite sprClear;//ステージクリア用の文字スプライト
 Sprite sprSos;//説明画面へ促す用の文字スプライト
 Sprite sprScore;//スコアの文字用スプライト
-Sprite sprNums[10];//スコアの0から9まで用の文字スプライト
+Sprite sprNumber[10];//スコアの0から9まで用の文字スプライト
 Sprite sprStageNum;//ステージ番号用の文字スプライト
+Sprite sprStart;//ゲームの開始時に表示する文字スプライト
 
 glm::vec3 playerVelocity;//自機の移動速度
-Actor playerBulletList[300];//自機の弾のリスト
+Actor playerBulletList[128];//自機の弾のリスト
 Actor playerLaserList[3];//自機のレーザーのリスト
-Actor enemyList[300];//敵のリスト
-Actor effectList[300];//爆発などの特殊効果用スプライトのリスト
+Actor enemyList[128];//敵のリスト
+Actor effectList[128];//爆発などの特殊効果用スプライトのリスト
 Actor itemList[25];//アイテム用スプライトのリスト
 Actor healItemList[15];//回復アイテム用のリスト
-Actor enemyBulletList[700];//敵の弾のリスト
+Actor enemyBulletList[900];//敵の弾のリスト
 
 int score;//プレイヤーの得点
 float timer;
@@ -125,7 +129,9 @@ bool isStagePassed;//ステージをクリアしていればtrue
 
 TitleScene titleScene;
 MainScene mainScene;
+GameClearScene gameClearScene;
 GameOverScene gameOverScene;
+
 
 //プロトタイプ宣言
 void processInput(GLFWEW::WindowRef);
@@ -167,7 +173,7 @@ bool initialize(MainScene* scene)
 
 	if (scene->stageNo == 1)
 	{
-		score = 00000000;
+		score = 0;
 		weaponLevel = weaponLevelMin;
 		weaponType = weaponTypeWideShot;
 	}
@@ -187,7 +193,7 @@ bool initialize(MainScene* scene)
 	sePlayerLaser = audio.Prepare("Res/Audio/Laser.xwm");
 	sePowerUp = audio.Prepare("Res/Audio/GetItem.xwm");
 	seHeal = audio.Prepare("Res/Audio/Heal.mp3");
-	bgm = audio.Prepare("Res/Audio/Neolith.xwm");
+	bgm = audio.Prepare("Res/Audio/Main.mp3");
 
 	//BGMをループを再生する
 	bgm->Play(Audio::Flag_Loop);
@@ -249,7 +255,6 @@ int main()
 		render(window);
 		audio.Update();
 	}
-
 	Texture::Finalize();
 	audio.Destroy();
 	return 0;
@@ -262,11 +267,19 @@ int main()
 */
 void processInput(GLFWEW::WindowRef window)
 {
+	//ゲームの状態がタイトル画面の場合
 	if (gameState == gameStateTitle)
 	{
 		processInput(window, &titleScene);
 		return;
 	}
+	//ゲームの状態がクリア画面の場合
+	else if (gameState == gameStateClear)
+	{
+		processInput(window, &gameClearScene);
+		return;
+	}
+	//ゲームの状態がゲームオーバー画面の場合
 	else if (gameState == gameStateGameOver)
 	{
 		processInput(window, &gameOverScene);
@@ -274,10 +287,12 @@ void processInput(GLFWEW::WindowRef window)
 	}
 	window.Update();
 
+	//自機の体力が0以下の場合
 	if (sprPlayer.health <= 0)
 	{
 		playerVelocity = glm::vec3(0, 0, 0);
 		stopPlayerLaser();
+		shotTimer = 0;
 	}
 	else
 	{
@@ -309,27 +324,30 @@ void processInput(GLFWEW::WindowRef window)
 		}
 		if (playerVelocity.x || playerVelocity.y)
 		{
-			//playerVelocity *= 400.0f;//プレイヤーの移動速度
 			playerVelocity = glm::normalize(playerVelocity) * 400.0f;//ベクトルの長さを正規化
 		}
 
-		//武器の切り替え
+		//エスキーを押したら武器を切り替える
 		if (gamepad.buttonDown&GamePad::B)
 		{
+			//武器がワイドショットの場合
 			if (weaponType == weaponTypeWideShot)
 			{
 				weaponType = weaponTypeLaser;
 			}
+			//武器がレーザーの場合
 			else
 			{
 				weaponType = weaponTypeWideShot;
 			}
 		}
 
-		//弾の反射
+		//武器がワイドショットでかつ
+		//スペースキーを長押ししてかつ弾の待ち時間が0以下なら
 		if (weaponType == weaponTypeWideShot &&
 			(gamepad.buttons&GamePad::A && shotTimer <= 0))
 		{
+			//ワイドショットのレベルが最大になるまで繰り返す
 			for (int i = 0; i < weaponLevel; i++)
 			{
 				//空いている弾の構造体の関数呼び出し
@@ -347,8 +365,8 @@ void processInput(GLFWEW::WindowRef window)
 					const float c = std::cos(radian);
 					const float s = std::sin(radian);
 					bullet->spr.Tweener(TweenAnimation::Animate::Create(
-						TweenAnimation::MoveBy::Create(1, glm::vec3(1200 * c , 1200 * s, 0),
-						TweenAnimation::EasingType::Linear)));
+						TweenAnimation::MoveBy::Create(1, glm::vec3(1200 * c, 1200 * s, 0),
+							TweenAnimation::EasingType::Linear)));
 					bullet->spr.Rotation(radian);
 					bullet->collisionShape = Rect(-16, -8, 32, 16);
 					bullet->health = 0.5f;
@@ -356,6 +374,7 @@ void processInput(GLFWEW::WindowRef window)
 			}
 			sePlayerShot->Play();//弾の発射音を再生
 		}
+		//武器がレ-ザーでスペースキーを押した場合
 		if ((weaponType == weaponTypeLaser) && (gamepad.buttons & GamePad::A))
 		{
 			if (playerLaserList[0].health <= 0)
@@ -381,18 +400,18 @@ void processInput(GLFWEW::WindowRef window)
 		{
 			stopPlayerLaser();
 		}
-		//もし場面がメイン画面かつPキーが押されたら
+		//ゲームの状態がメイン画面でかつピーキーを押下したら
 		if ((gameState == gameStateMain) && (gamepad.buttonDown & GamePad::X))
 		{
 			gameState = gameStatePose;
-			sprHelp = Sprite("Res/Pose.png");
+			
 		}
+		//ゲームの状態が操作説明画面でかつエスケープキーを押下したら
 		else if ((gameState == gameStatePose) && (gamepad.buttonDown & GamePad::ESC))
 		{
 			gameState = gameStateMain;
 		}
 	}
-	
 }
 
 /**
@@ -404,65 +423,178 @@ void update(GLFWEW::WindowRef window)
 {
 	const float deltaTime = window.DeltaTime();//前回の更新からの経過時間(秒)
 
-	//背景を動かす処理を作成する
-	// 背景の座標を取得する
-	glm::vec3 wallmove = sprBackground.Position();
-
-	// 取得した座標＋X方向に3ドット動かす
-	wallmove.x = wallmove.x - 0.03;
-
-	// 背景スプライトの座標に、取得した座標を設定する
-	sprBackground.Position(wallmove);
-
-	//設定した座標を反映する
-	sprBackground.Update(deltaTime);
-
+	//ゲームの状態がタイトル画面の場合
 	if (gameState == gameStateTitle)
 	{
 		update(window, &titleScene);
 		return;
 	}
+	//ゲームクリアの場合
+	else if (gameState == gameStateClear)
+	{
+		update(window, &gameClearScene);
+		return;
+	}
+
+	//ゲームオーバーの場合
+	else if (gameState == gameStateGameOver)
+	{
+		update(window, &gameOverScene);
+		return;
+	}
+	//ゲームの状態がメイン画面の場合
 	else if (gameState == gameStateMain)
 	{
-		sprSos = Sprite("Res/Sos.png", glm::vec3(0,250,0));
+		//スプライトを設定する
+		sprSos = Sprite("Res/Sos.png", glm::vec3(0, 240, 0));
 		sprScore = Sprite("Res/Score.png", glm::vec3(-90, 280, 0));
-		sprStageNum = Sprite("Res/StageNo.png", glm::vec3(-350,280,0));
-		/*
-		sprNums[0] = Sprite("Res/Num0.png",glm::vec3(-10,280,0));
-		sprNums[1] = Sprite("Res/Num0.png",glm::vec3(10,280,0));
-		sprNums[2] = Sprite("Res/Num0.png", glm::vec3(30, 280, 0));
-		sprNums[3] = Sprite("Res/Num0.png", glm::vec3(50, 280, 0));
-		sprNums[4] = Sprite("Res/Num0.png", glm::vec3(70, 280, 0));
-		sprNums[5] = Sprite("Res/Num0.png", glm::vec3(90, 280, 0));
-		sprNums[6] = Sprite("Res/Num0.png", glm::vec3(110, 280, 0));
-		sprNums[7] = Sprite("Res/Num0.png", glm::vec3(130, 280, 0));
 
-		if (score >= 100)//100点を取ったら
-		{
-			sprNums[0] = Sprite("Res/num1.png", glm::vec3(-10,280,0));
-			sprNums[1] = Sprite("Res/num0.png", glm::vec3(10,280,0));
-			sprNums[2] = Sprite("Res/num0.png", glm::vec3(30,280,0));
-		}
-		sprNums[0].Update(deltaTime);
-		sprNums[1].Update(deltaTime);
-		sprNums[2].Update(deltaTime);
-		sprNums[3].Update(deltaTime);
-		sprNums[4].Update(deltaTime);
-		sprNums[5].Update(deltaTime);
-		sprNums[6].Update(deltaTime);
-		sprNums[7].Update(deltaTime);
-		*/
+		//文字スプライトを設定する
+		sprStageNum = Sprite("Res/StageNo.png", glm::vec3(-350, 280, 0));
+
+		//スプライトの座標を反映する
 		sprSos.Update(deltaTime);
 		sprScore.Update(deltaTime);
+
+		//文字スプライトの座標を反映する
 		sprStageNum.Update(deltaTime);
+
+		// 背景の座標を取得する
+		glm::vec3 wallMove = sprBackground.Position();
+
+		// 取得した座標から-X方向に3ドット動かす
+		wallMove.x = wallMove.x - 0.03;
+
+		// 背景スプライトの座標に、取得した座標を設定する
+		sprBackground.Position(wallMove);
+
+		//設定した座標を反映する
+		sprBackground.Update(deltaTime);
+
+		//自機の移動
+		if (sprPlayer.health > 0)
+		{
+			if (playerVelocity.x || playerVelocity.y)
+			{
+				glm::vec3 newPos = sprPlayer.spr.Position();
+				newPos = newPos + playerVelocity * deltaTime;
+
+				//自機の移動範囲を画面内に制限する
+				const Rect playerRect = sprPlayer.spr.Rectangle();
+				if (newPos.x < -0.5f * (windowWidth - playerRect.size.x))
+				{
+					newPos.x = -0.5f *(windowWidth - playerRect.size.x);
+				}
+				else if (newPos.x > 0.5f * (windowWidth - playerRect.size.x))
+				{
+					newPos.x = 0.5f * (windowWidth - playerRect.size.x);
+				}
+				if (newPos.y < -0.5f * (windowHeight - playerRect.size.y))
+				{
+					newPos.y = -0.5f * (windowHeight - playerRect.size.y);
+				}
+				else if (newPos.y > 0.5f * (windowHeight - playerRect.size.y))
+				{
+					newPos.y = 0.5f * (windowHeight - playerRect.size.y);
+				}
+				sprPlayer.spr.Position(newPos);
+			}
+			sprPlayer.spr.Update(deltaTime);
+
+			//弾の制限
+			if (shotTimer > 0)
+			{
+				shotTimer -= deltaTime;
+			}
+
+			//レーザーの移動
+			if (playerLaserList[0].health > 0)
+			{
+				//レーザー(頭部)の移動
+				const float laserSpeed = 1600.0f;
+				const glm::vec3 posFiringPoint = sprPlayer.spr.Position();
+				glm::vec3 posHead = playerLaserList[2].spr.Position();
+				posHead.x += laserSpeed * deltaTime;
+				if (posHead.x > windowWidth * 0.5f)
+				{
+					posHead.x = windowWidth * 0.5f;
+				}
+				posHead.y = posFiringPoint.y;
+				playerLaserList[2].spr.Position(posHead);
+
+				//レーザー(胴部)の移動
+				const float halfHeadSize = playerLaserList[2].spr.Rectangle().size.x * 0.5f;
+				const float halfTailSize = playerLaserList[0].spr.Rectangle().size.x * 0.5f;
+				const float bodySize = playerLaserList[1].spr.Rectangle().size.x;
+				const float bodyLength =
+					posHead.x - posFiringPoint.x - halfHeadSize - halfTailSize;
+				glm::vec3 posBody = playerLaserList[1].spr.Position();
+				posBody.x = posFiringPoint.x + (posHead.x - posFiringPoint.x) *0.5f;
+				posBody.y = posFiringPoint.y;
+				playerLaserList[1].spr.Position(posBody);
+				playerLaserList[1].spr.Scale(glm::vec2(bodyLength / bodySize, 1));
+				playerLaserList[1].collisionShape =
+					Rect(-bodyLength * 0.5f, -4, bodyLength, 8);
+				//レーザー(尾部)の移動
+				playerLaserList[0].spr.Position(posFiringPoint);
+			}
+			//敵やアイテムをを出現させる
+			generateObjectFromMap(deltaTime);
+
+			//Actor配列の更新の関数呼び出し
+			updateEnemies(deltaTime);
+			updateActorList(std::begin(enemyList), std::end(enemyList), deltaTime);
+			updateActorList(std::begin(playerBulletList), std::end(playerBulletList), deltaTime);
+			updateActorList(std::begin(effectList), std::end(effectList), deltaTime);
+			updateActorList(std::begin(itemList), std::end(itemList), deltaTime);
+			updateActorList(std::begin(healItemList), std::end(healItemList), deltaTime);
+			updateActorList(std::begin(playerLaserList), std::end(playerLaserList), deltaTime);
+			updateActorList(std::begin(enemyBulletList), std::end(enemyBulletList), deltaTime);
+
+
+			//自機の弾と敵の衝突判定
+			detectCollision(std::begin(playerBulletList), std::end(playerBulletList),
+				std::begin(enemyList), std::end(enemyList),
+				playerBulletAndEnemyContactHandler);
+
+			//自機と敵の弾の衝突判定
+			detectCollision(
+				&sprPlayer, &sprPlayer + 1,
+				std::begin(enemyBulletList), std::end(enemyBulletList),
+				playerAndEnemyBulletContactHandler);
+
+			//自機のレーザーと敵の衝突判定
+			detectCollision(
+				std::begin(playerLaserList), std::end(playerLaserList),
+				std::begin(enemyList), std::end(enemyList),
+				playerLaserAndEnemyContactHandler);
+
+			//自機と敵の衝突判定
+			detectCollision(
+				&sprPlayer, &sprPlayer + 1,
+				std::begin(enemyList), std::end(enemyList),
+				playerAndEnemyContactHandler);
+
+			//自機と武器強化アイテムの衝突判定
+			detectCollision(
+				&sprPlayer, &sprPlayer + 1,
+				std::begin(itemList), std::end(itemList),
+				playerAndItemContactHandler);
+
+			//自機と回復アイテムの衝突判定
+			detectCollision(
+				&sprPlayer, &sprPlayer + 1,
+				std::begin(healItemList), std::end(healItemList),
+				playerAndHealItemContactHandler);
+		}
 
 		//自機が破壊されて3秒たったらゲームオーバー画面を表示する
 		// * waitTimerに3を設定
-		// * 自記が破壊されていたら
+		// * 自機が破壊されていたら
 		//   * waitTimerからdeltaTimeを引く
 		//   * waitTimerが0以下になったら
 		//     * ゲームオーバー画面に移行する
-		if (sprPlayer.health <= 0)
+		else if (sprPlayer.health <= 0)
 		{
 			sprPlayer.health = 0;
 			waitTime -= deltaTime;
@@ -476,47 +608,46 @@ void update(GLFWEW::WindowRef window)
 			return;
 		}
 	}
-
-	//ポーズ画面の場合
 	else if (gameState == gameStatePose)
 	{
-		wallmove = glm::vec3(0, 0, 0);
-		sprBackground.Position(wallmove);
-		sprKeypad = Sprite("Res/Keypad.png",glm::vec3(0,20,0));
-		sprHand = Sprite("Res/Hand.png", glm::vec3(0, 260, 0));
-		sprBackMain = Sprite("Res/BackMain.png", glm::vec3(-130, 200, 0));
-		sprS = Sprite("Res/Skey.png", glm::vec3(-157,-30,0));
-		sprWepon = Sprite("Res/Wepon.png", glm::vec3(-240,-180,0));
-		sprSpace = Sprite("Res/Space.png", glm::vec3(-25,-105,0));
-		sprAttack = Sprite("Res/Attack.png", glm::vec3(60,-210,0));
-		sprUp = Sprite("Res/Cursors.png", glm::vec3(263,-60,0));
-		sprDown = Sprite("Res/Down.png", glm::vec3(260, -125, 0));
-		sprLeft = Sprite("Res/Cursors.png", glm::vec3(225,-100,0));
-		sprRight = Sprite("Res/Cursors.png", glm::vec3(302, -102, 0));
-		sprCursors = Sprite("Res/Move.png", glm::vec3(250, -170, 0));
-		sprRise = Sprite("Res/Rise.png", glm::vec3(-280, 90, 0));
-	
-		sprKeypad.Update(deltaTime);
-		sprHand.Update(deltaTime);
-		sprBackMain.Update(deltaTime);
-		sprS.Update(deltaTime);
-		sprWepon.Update(deltaTime);
-		sprSpace.Update(deltaTime);
-		sprAttack.Update(deltaTime);
-		sprUp.Update(deltaTime);
-		sprDown.Update(deltaTime);
-		sprLeft.Update(deltaTime);
-		sprRight.Update(deltaTime);
-		sprCursors.Update(deltaTime);
-		sprRise.Update(deltaTime);
-		return;
-	}
+	stopPlayerLaser();
+	//レーザーを止める
+	//stopPlayerLaser();
+	//スプライトを設定する
+	sprHelp = Sprite("Res/Pose.png");
+	sprUp = Sprite("Res/Cursors.png", glm::vec3(263, -60, 0));
+	sprLeft = Sprite("Res/Cursors.png", glm::vec3(225, -100, 0));
+	sprRight = Sprite("Res/Cursors.png", glm::vec3(302, -102, 0));
+	sprDown = Sprite("Res/Down.png", glm::vec3(260, -125, 0));
+	sprRise = Sprite("Res/Rise.png", glm::vec3(-280, 90, 0));
+	sprSkey = Sprite("Res/Skey.png", glm::vec3(-157, -30, 0));
+	sprSpace = Sprite("Res/Space.png", glm::vec3(-25, -105, 0));
 
-	//ゲームオーバーの場合
-	else if (gameState == gameStateGameOver)
-	{
-		update(window, &gameOverScene);
-		return;
+	//文字スプライトを設定する
+	sprKeypad = Sprite("Res/Keypad.png", glm::vec3(0, 20, 0));
+	sprHand = Sprite("Res/Hand.png", glm::vec3(0, 260, 0));
+	sprBackMain = Sprite("Res/BackMain.png", glm::vec3(-250, 220, 0));
+	sprWepon = Sprite("Res/Wepon.png", glm::vec3(-240, -180, 0));
+	sprAttack = Sprite("Res/Attack.png", glm::vec3(60, -210, 0));
+	sprCursors = Sprite("Res/Move.png", glm::vec3(250, -170, 0));
+
+	//スプライトの座標を反映する
+	sprHelp.Update(deltaTime);
+	sprUp.Update(deltaTime);
+	sprLeft.Update(deltaTime);
+	sprRight.Update(deltaTime);
+	sprDown.Update(deltaTime);
+	sprRise.Update(deltaTime);
+	sprSkey.Update(deltaTime);
+	sprSpace.Update(deltaTime);
+
+	//文字スプライトの座標を反映する
+	sprKeypad.Update(deltaTime);
+	sprHand.Update(deltaTime);
+	sprBackMain.Update(deltaTime);
+	sprWepon.Update(deltaTime);
+	sprAttack.Update(deltaTime);
+	sprCursors.Update(deltaTime);
 	}
 
 	//ステージクリア判定
@@ -524,192 +655,25 @@ void update(GLFWEW::WindowRef window)
 	{
 		isStagePassed = true;
 		boss = nullptr;
-		timer = 5;
+		timer = 2;
 	}
 	if (isStagePassed)
 	{
-		sprClear = Sprite("Res/Clear.png", glm::vec3(0));;
 		timer -= deltaTime;
+		waitTime -= deltaTime;
 		if (timer <= 0)
 		{
-			sprClear.Update(deltaTime);
-			bgm->Stop();//BGMを停止する
-			stopPlayerLaser();
-			++mainScene.stageNo;
-			initialize(&mainScene);
-			return;
+			if (waitTime <= 0)
+			{
+
+				bgm->Stop();//BGMを停止する
+				stopPlayerLaser();
+				gameState = gameStateClear;
+				initialize(&gameClearScene);
+				return;
+			}
 		}
 	}
-	//自機の移動
-	if (sprPlayer.health > 0)
-	{
-		if (playerVelocity.x || playerVelocity.y)
-		{
-			glm::vec3 newPos = sprPlayer.spr.Position();
-			newPos = newPos + playerVelocity * deltaTime;
-
-			//自機の移動範囲を画面内に制限する
-			const Rect playerRect = sprPlayer.spr.Rectangle();
-			if (newPos.x < -0.5f * (windowWidth - playerRect.size.x))
-			{
-				newPos.x = -0.5f *(windowWidth - playerRect.size.x);
-			}
-			else if (newPos.x > 0.5f * (windowWidth - playerRect.size.x))
-			{
-				newPos.x = 0.5f * (windowWidth - playerRect.size.x);
-			}
-			if (newPos.y < -0.5f * (windowHeight - playerRect.size.y))
-			{
-				newPos.y = -0.5f * (windowHeight - playerRect.size.y);
-			}
-			else if (newPos.y > 0.5f * (windowHeight - playerRect.size.y))
-			{
-				newPos.y = 0.5f * (windowHeight - playerRect.size.y);
-			}
-			sprPlayer.spr.Position(newPos);
-		}
-		sprPlayer.spr.Update(deltaTime);
-
-		//弾の制限
-		if (shotTimer > 0)
-		{
-			shotTimer -= deltaTime;
-		}
-
-#if 1
-		generateObjectFromMap(deltaTime);
-#else
-		//出現までの時間が0以下になったら敵を出現させる
-		enemyGenerationTimer -= deltaTime;
-		if (enemyGenerationTimer <= 0)
-		{
-			//空いてる(破壊されている)敵構造体を検索
-			Actor* enemy = nullptr;
-			for (Actor* i = std::begin(enemyList); i != std::end(enemyList); ++i)
-			{
-				if (i->health <= 0)
-				{
-					enemy = i;
-					break;
-				}
-			}
-			//空いてる構造体が見つかったら、それを使って敵を出現させる
-			if (enemy != nullptr)
-			{
-				const std::uniform_real_distribution<float> y_distribution(
-					-0.5f * windowHeight, 2.0f * windowHeight);
-				enemy->spr = Sprite("Res/Objects.png",
-					glm::vec3(0.5f * windowWidth,
-						y_distribution(random), 0), Rect(480, 0, 32, 32));
-				enemy->spr.Animator(FrameAnimation::Animate::Create(tlEnemy));
-				namespace TA = TweenAnimation;
-				TA::SequencePtr seq = TA::Sequence::Create(4);
-				seq->Add(TA::MoveBy::Create(
-					1, glm::vec3(0, 150, 0),
-					TA::EasingType::EaseInOut, TA::Target::Y));
-				seq->Add(TA::MoveBy::Create(
-					1, glm::vec3(-200, 0, 0),
-					TA::EasingType::EaseInOut, TA::Target::X));
-				seq->Add(TA::MoveBy::Create(
-					1, glm::vec3(0, -150, 0),
-					TA::EasingType::EaseInOut, TA::Target::Y));
-				seq->Add(TA::MoveBy::Create(
-					1, glm::vec3(200, 0, 0),
-					TA::EasingType::EaseInOut, TA::Target::X));
-				seq->Add(TA::MoveBy::Create(
-					1, glm::vec3(-200, 0, 0),
-					TA::EasingType::EaseInOut, TA::Target::X));
-				TA::ParallelizePtr par = TA::Parallelize::Create(1);
-				par->Add(seq);
-				par->Add(TA::MoveBy::Create(8, glm::vec3(-1000, 0, 0),
-					TA::EasingType::Linear, TA::Target::X));
-				enemy->spr.Tweener(TA::Animate::Create(seq));
-				enemy->collisionShape = Rect(-16, -16, 32, 32);
-				enemy->health = 10;
-				//次の敵が出現するまでの時間を設定する
-				enemyGenerationTimer = 2;
-			}
-		}
-#endif
-		//Actor配列の更新の関数呼び出し
-		updateEnemies(deltaTime);
-		updateActorList(std::begin(enemyList), std::end(enemyList), deltaTime);
-		updateActorList(std::begin(playerBulletList), std::end(playerBulletList), deltaTime);
-		updateActorList(std::begin(effectList), std::end(effectList), deltaTime);
-		updateActorList(std::begin(itemList), std::end(itemList),deltaTime);
-		updateActorList(std::begin(healItemList), std::end(healItemList), deltaTime);
-		updateActorList(std::begin(playerLaserList), std::end(playerLaserList),deltaTime);
-		updateActorList(std::begin(enemyBulletList), std::end(enemyBulletList), deltaTime);
-
-		//レーザーの移動
-		if (playerLaserList[0].health > 0)
-		{
-			//レーザー(頭部)の移動
-			const float laserSpeed = 1600.0f;
-			const glm::vec3 posFiringPoint = sprPlayer.spr.Position();
-			glm::vec3 posHead = playerLaserList[2].spr.Position();
-			posHead.x += laserSpeed * deltaTime;
-			if (posHead.x > windowWidth * 0.5f)
-			{
-				posHead.x = windowWidth * 0.5f;
-			}
-			posHead.y = posFiringPoint.y;
-			playerLaserList[2].spr.Position(posHead);
-
-			//レーザー(胴部)の移動
-			const float halfHeadSize = playerLaserList[2].spr.Rectangle().size.x * 0.5f;
-			const float halfTailSize = playerLaserList[0].spr.Rectangle().size.x * 0.5f;
-			const float bodySize = playerLaserList[1].spr.Rectangle().size.x;
-			const float bodyLength =
-				posHead.x - posFiringPoint.x - halfHeadSize - halfTailSize;
-			glm::vec3 posBody = playerLaserList[1].spr.Position();
-			posBody.x = posFiringPoint.x + (posHead.x - posFiringPoint.x) *0.5f;
-			posBody.y = posFiringPoint.y;
-			playerLaserList[1].spr.Position(posBody);
-			playerLaserList[1].spr.Scale(glm::vec2(bodyLength / bodySize, 1));
-			playerLaserList[1].collisionShape =
-				Rect(-bodyLength * 0.5f, -4, bodyLength, 8);
-
-			//レーザー(尾部)の移動
-			playerLaserList[0].spr.Position(posFiringPoint);
-		}
-
-		//自機の弾と敵の衝突判定
-		detectCollision(std::begin(playerBulletList), std::end(playerBulletList),
-			std::begin(enemyList), std::end(enemyList),
-			playerBulletAndEnemyContactHandler);
-
-		//自機と敵の弾の衝突判定
-		detectCollision(
-			&sprPlayer, &sprPlayer + 1,
-			std::begin(enemyBulletList), std::end(enemyBulletList),
-			playerAndEnemyBulletContactHandler);
-
-		//自機のレーザーと敵の衝突判定
-		detectCollision(
-			std::begin(playerLaserList), std::end(playerLaserList),
-			std::begin(enemyList), std::end(enemyList),
-			playerLaserAndEnemyContactHandler);
-
-		//自機と敵の衝突判定
-		detectCollision(
-			&sprPlayer, &sprPlayer + 1,
-			std::begin(enemyList), std::end(enemyList),
-			playerAndEnemyContactHandler);
-
-		//自機と武器強化アイテムの衝突判定
-		detectCollision(
-		&sprPlayer, &sprPlayer + 1,
-			std::begin(itemList), std::end(itemList),
-			playerAndItemContactHandler);
-
-		//自機と回復アイテムの衝突判定
-		detectCollision(
-			&sprPlayer, &sprPlayer + 1,
-			std::begin(healItemList), std::end(healItemList),
-		playerAndHealItemContactHandler);
-	}
-	
 }
 
 /**
@@ -719,53 +683,45 @@ void update(GLFWEW::WindowRef window)
 */
 void render(GLFWEW::WindowRef window)
 {
+	//ゲームの状態がタイトル画面の場合
 	if (gameState == gameStateTitle)
 	{
 		render(window, &titleScene);
 		return;
 	}
+	//ゲームの状態がクリア画面の場合
+	else if (gameState == gameStateClear)
+	{
+		render(window, &gameClearScene);
+		return;
+	}
+	//ゲームの状態がゲームオーバー画面の場合
 	else if (gameState == gameStateGameOver)
 	{
 		render(window, &gameOverScene);
 		return;
 	}
+	renderer.BeginUpdate();//頂点データの作成を開始する
 
-	renderer.BeginUpdate();
-	renderer.AddVertices(sprBackground);
-	if (gameState == gameStatePose)
+	renderer.AddVertices(sprBackground);//メイン画面のスプライトを更新する
+
+	//ゲームの状態がメイン画面の場合
+	if (gameState == gameStateMain)
 	{
-		renderer.AddVertices(sprHelp);
-		renderer.AddVertices(sprESC);
-		renderer.AddVertices(sprKeypad);
-		renderer.AddVertices(sprHand);
-		renderer.AddVertices(sprBackMain);
-		renderer.AddVertices(sprS);
-		renderer.AddVertices(sprWepon);
-		renderer.AddVertices(sprSpace);
-		renderer.AddVertices(sprAttack);
-		renderer.AddVertices(sprUp);
-		renderer.AddVertices(sprDown);
-		renderer.AddVertices(sprLeft);
-		renderer.AddVertices(sprRight);
-		renderer.AddVertices(sprCursors);
-		renderer.AddVertices(sprRise);
-	}
-	else if (sprPlayer.health > 0)
-	{
-		renderer.AddVertices(sprPlayer.spr);
-	}
-	if(gameState == gameStateMain)
-	{
-		renderer.AddVertices(sprSos);
-		//renderer.AddVertices(sprScore);
-		/*
-		for (int i = 0; i < 8; i++)
+		//自機の体力が0より大きい場合
+		if ((sprPlayer.health > 0))
 		{
-			renderer.AddVertices(sprNums[i]);
+			//自機スプライトの頂点データを設定する
+			renderer.AddVertices(sprPlayer.spr);
 		}
-		*/
+		//スプライトの頂点データを設定する
+		renderer.AddVertices(sprSos);
+		renderer.AddVertices(sprScore);
+
+		//文字スプライトの頂点データを設定する
 		renderer.AddVertices(sprStageNum);
 
+		//アクター配列を設定する
 		renderActorList(std::begin(enemyList), std::end(enemyList));
 		renderActorList(std::begin(playerBulletList), std::end(playerBulletList));
 		renderActorList(std::begin(effectList), std::end(effectList));
@@ -773,36 +729,48 @@ void render(GLFWEW::WindowRef window)
 		renderActorList(std::begin(healItemList), std::end(healItemList));
 		renderActorList(std::begin(playerLaserList), std::end(playerLaserList));
 		renderActorList(std::begin(enemyBulletList), std::end(enemyBulletList));
-
-		if (isStagePassed)
-		{
-			renderer.AddVertices(sprClear);
-		}
 	}
-	renderer.EndUpdate();
-	renderer.Draw({ windowWidth,windowHeight });
 	
+	//ゲームの状態が操作説明画面の場合
+	else if (gameState == gameStatePose)
+	{
+		//スプライトの頂点データを設定する
+		renderer.AddVertices(sprHelp);
+		renderer.AddVertices(sprUp);
+		renderer.AddVertices(sprLeft);
+		renderer.AddVertices(sprRight);
+		renderer.AddVertices(sprDown);
+		renderer.AddVertices(sprRise);
+		renderer.AddVertices(sprSkey);
+		renderer.AddVertices(sprSpace);
+
+		//文字スプライトの頂点データを設定する
+		renderer.AddVertices(sprKeypad);
+		renderer.AddVertices(sprHand);
+		renderer.AddVertices(sprBackMain);
+		renderer.AddVertices(sprWepon);
+		renderer.AddVertices(sprAttack);
+		renderer.AddVertices(sprCursors);
+	}
+	renderer.EndUpdate();//頂点データの作成を終了する
+	renderer.Draw({ windowWidth,windowHeight });//スプライトと文字スプライトを描画する
+	
+	//フォントを描画する時にゲームの状態がメイン画面の場合
 	if (gameState == gameStateMain)
 	{
-		fontRenderer.BeginUpdate();
-		char str[64];
-		snprintf(str, sizeof(str), "SCORE:");
-		fontRenderer.Scale(glm::vec2(1.0f));
-		fontRenderer.AddString(glm::vec2(-140, 300),str);
-		snprintf(str, sizeof(str), "%08d", score);
-		fontRenderer.Scale(glm::vec2(1.0f));
-		fontRenderer.AddString(glm::vec2(-30, 300), str);
+		fontRenderer.BeginUpdate();//文字データの作成を開始する
+		char str[64];//設定した文字数
+		snprintf(str, sizeof(str), "%08d", score);//数値を文字列に変換する
+		fontRenderer.Scale(glm::vec2(1.2f));//文字を拡大する
+		fontRenderer.AddString(glm::vec2(-20, 310), str);//文字を追加する
+
 		snprintf(str, sizeof(str), "体力:%0.0f/%0.0f", sprPlayer.health, 50.0f);
 		fontRenderer.Scale(glm::vec2(0.7f, 0.7f));
 		fontRenderer.AddString(glm::vec2(210, 280), str);
-		fontRenderer.Scale(glm::vec2(0.6f, 0.6f));
-		fontRenderer.EndUpdate();
-		fontRenderer.Draw();
+		fontRenderer.EndUpdate();//文字データの作成を終了する
+		fontRenderer.Draw();//追加した文字を表示する
 	}
 	window.SwapBuffers();
-
-	
-	
 }
 
 /**
@@ -860,13 +828,6 @@ void playerBulletAndEnemyContactHandler(Actor* bullet, Actor* enemy)
 
 	if (enemy->health <= 0)
 	{
-		/*
-		int maxScore = score;
-		if (maxScore > 99999999)
-		{
-			maxScore = 99999999;
-		}
-		*/
 		if (score <= 0)
 		{
 			score = 0;
@@ -958,13 +919,6 @@ void playerAndEnemyBulletContactHandler(Actor* player, Actor* bullet)
 
 	if (player->health >= 0)
 	{
-		/*
-		int maxScore = score;
-		if (maxScore > 99999999)
-		{
-			maxScore = 99999999;
-		}
-		*/
 		if (score <= 0)
 		{
 			score = 0;
