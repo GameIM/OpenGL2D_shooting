@@ -19,7 +19,7 @@ bool initialize(TitleScene* scene)
 	Audio::EngineRef audio = Audio::Engine::Instance();
 	scene->titleBgm = audio.Prepare("Res/Audio/Title.mp3");
 	scene->titleBgm->Play(Audio::Flag_Loop);
-	scene->bg = Sprite("Res/UnknownPlanet.png");
+	scene->bg = Sprite("Res/title.png");
 	scene->logo = Sprite("Res/Title_S.png", glm::vec3(0, 100, 0));
 	scene->Press = Sprite("Res/Enter.png", glm::vec3(-10,-140,0));
 	scene->mode = scene->modeStart;
@@ -55,7 +55,7 @@ void processInput(GLFWEW::WindowRef window, TitleScene* scene)
 	}
 	//AまたはSTARTボタンが押されたら、ゲーム開始待ちモードに移る
 	const GamePad gamepad = window.GetGamePad();
-	if (gamepad.buttonDown & (GamePad::A | GamePad::START))
+	if (gamepad.buttonDown &GamePad::START)
 	{
 		scene->mode = scene->modeNextState;
 		scene->timer = 2.0f;

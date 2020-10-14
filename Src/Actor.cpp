@@ -30,7 +30,6 @@ bool detectCollision(const Rect* lhs, const Rect* rhs)
 */
 void initializeActorList(Actor* first, Actor* last)
 {
-	//“G‚Ì”z—ñ‚ð‰Šú‰»
 	for (Actor* i = first; i != last; ++i)
 	{
 		i->health = 0;
