@@ -3,6 +3,7 @@
 */
 #include "MainScene.h"
 #include "TitleScene.h"
+#include "FirstHelpScene.h"
 #include "GameClearScene.h"
 #include "GameOverScene.h"
 #include "GameData.h"
@@ -128,6 +129,7 @@ Actor* boss;//ボスActorのポインタ
 bool isStagePassed;//ステージをクリアしていればtrue
 
 TitleScene titleScene;
+FirstHelpScene firstHelpScene;
 MainScene mainScene;
 GameClearScene gameClearScene;
 GameOverScene gameOverScene;
@@ -271,6 +273,12 @@ void processInput(GLFWEW::WindowRef window)
 	if (gameState == gameStateTitle)
 	{
 		processInput(window, &titleScene);
+		return;
+	}
+	//ゲームの状態が操作説明画面の場合
+	else if (gameState == gameStateHelp)
+	{
+		processInput(window, &firstHelpScene);
 		return;
 	}
 	//ゲームの状態がクリア画面の場合
@@ -427,6 +435,12 @@ void update(GLFWEW::WindowRef window)
 	if (gameState == gameStateTitle)
 	{
 		update(window, &titleScene);
+		return;
+	}
+	//ゲームの状態が操作説明画面の場合
+	else if (gameState == gameStateHelp)
+	{
+		update(window, &firstHelpScene);
 		return;
 	}
 	//ゲームクリアの場合
@@ -612,9 +626,10 @@ void update(GLFWEW::WindowRef window)
 	{
 	stopPlayerLaser();
 	//レーザーを止める
-	//stopPlayerLaser();
+	stopPlayerLaser();
 	//スプライトを設定する
 	sprHelp = Sprite("Res/Pose.png");
+	sprKeypad = Sprite("Res/Keypad.png", glm::vec3(0, 20, 0));
 	sprUp = Sprite("Res/Cursors.png", glm::vec3(263, -60, 0));
 	sprLeft = Sprite("Res/Cursors.png", glm::vec3(225, -100, 0));
 	sprRight = Sprite("Res/Cursors.png", glm::vec3(302, -102, 0));
@@ -624,7 +639,7 @@ void update(GLFWEW::WindowRef window)
 	sprSpace = Sprite("Res/Space.png", glm::vec3(-25, -105, 0));
 
 	//文字スプライトを設定する
-	sprKeypad = Sprite("Res/Keypad.png", glm::vec3(0, 20, 0));
+	
 	sprHand = Sprite("Res/Hand.png", glm::vec3(0, 260, 0));
 	sprBackMain = Sprite("Res/BackMain.png", glm::vec3(-250, 220, 0));
 	sprWepon = Sprite("Res/Wepon.png", glm::vec3(-240, -180, 0));
@@ -633,6 +648,7 @@ void update(GLFWEW::WindowRef window)
 
 	//スプライトの座標を反映する
 	sprHelp.Update(deltaTime);
+	sprKeypad.Update(deltaTime);
 	sprUp.Update(deltaTime);
 	sprLeft.Update(deltaTime);
 	sprRight.Update(deltaTime);
@@ -642,7 +658,6 @@ void update(GLFWEW::WindowRef window)
 	sprSpace.Update(deltaTime);
 
 	//文字スプライトの座標を反映する
-	sprKeypad.Update(deltaTime);
 	sprHand.Update(deltaTime);
 	sprBackMain.Update(deltaTime);
 	sprWepon.Update(deltaTime);
@@ -689,6 +704,12 @@ void render(GLFWEW::WindowRef window)
 		render(window, &titleScene);
 		return;
 	}
+	//ゲームの状態が操作説明画面の場合
+	else if (gameState == gameStateHelp)
+	{
+		render(window, &firstHelpScene);
+		return;
+	}
 	//ゲームの状態がクリア画面の場合
 	else if (gameState == gameStateClear)
 	{
@@ -730,12 +751,12 @@ void render(GLFWEW::WindowRef window)
 		renderActorList(std::begin(playerLaserList), std::end(playerLaserList));
 		renderActorList(std::begin(enemyBulletList), std::end(enemyBulletList));
 	}
-	
 	//ゲームの状態が操作説明画面の場合
 	else if (gameState == gameStatePose)
 	{
 		//スプライトの頂点データを設定する
 		renderer.AddVertices(sprHelp);
+		renderer.AddVertices(sprKeypad);
 		renderer.AddVertices(sprUp);
 		renderer.AddVertices(sprLeft);
 		renderer.AddVertices(sprRight);
@@ -745,7 +766,6 @@ void render(GLFWEW::WindowRef window)
 		renderer.AddVertices(sprSpace);
 
 		//文字スプライトの頂点データを設定する
-		renderer.AddVertices(sprKeypad);
 		renderer.AddVertices(sprHand);
 		renderer.AddVertices(sprBackMain);
 		renderer.AddVertices(sprWepon);
@@ -919,11 +939,16 @@ void playerAndEnemyBulletContactHandler(Actor* player, Actor* bullet)
 
 	if (player->health >= 0)
 	{
-		if (score <= 0)
+		//スコアが0点以上の場合
+		if (score > 0)
+		{
+			score -= 50;
+		}
+		//スコアが0点以下の場合
+		else if (score <= 0)
 		{
 			score = 0;
 		}
-			score -= 50;//敵の弾に衝突したらスコアを減らす
 		Actor* blast = findAvailableActor(
 			std::begin(effectList), std::end(effectList));
 		if (blast != nullptr)
@@ -935,6 +960,25 @@ void playerAndEnemyBulletContactHandler(Actor* player, Actor* bullet)
 				TA::Rotation::Create(20 / 60.0f, 1.5f)));
 			blast->health = 1;
 			seBlast->Play();//爆発音を再生
+		}
+		else if (player->health <= 0)
+		{
+			Actor*  blast = findAvailableActor(
+				std::begin(effectList), std::end(effectList));
+			for (int k = 0; k < 2; k++)
+			{
+				if (blast != nullptr)
+				{
+					blast->spr = Sprite("Res/Objects.png", bullet->spr.Position() + glm::vec3(32 * k, 0, 0));
+					blast->spr.Scale(glm::vec2(10));
+					blast->spr.Animator(FrameAnimation::Animate::Create(tlBlast));
+					namespace TA = TweenAnimation;
+					blast->spr.Tweener(TA::Animate::Create(
+						TA::Rotation::Create(20 / 60.0f, 1.5f)));
+					blast->health = 1;
+					seBlastBoss->Play();
+				}
+			}
 		}
 		weaponLevel--;
 		//自機のレベルを弱化させる
@@ -1024,6 +1068,16 @@ void playerAndEnemyContactHandler(Actor* player, Actor* enemy)
 
 	if (enemy->health <= 0)
 	{
+		//スコアが0点より大きい場合
+		if (score > 0)
+		{
+			score -= 10;
+		}
+		//スコアが0点以下の場合
+		else if (score <= 0)
+		{
+			score = 0;
+		}
 		Actor* blast = findAvailableActor(
 			std::begin(effectList), std::end(effectList));
 		blast->spr = Sprite("Res/Objects.png", enemy->spr.Position());
