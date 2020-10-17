@@ -3,6 +3,7 @@
 */
 #include "TitleScene.h"
 #include "MainScene.h"
+#include "FirstHelpScene.h"
 #include "GameData.h"
 
 /**
@@ -53,7 +54,7 @@ void processInput(GLFWEW::WindowRef window, TitleScene* scene)
 	{
 		return;
 	}
-	//AまたはSTARTボタンが押されたら、ゲーム開始待ちモードに移る
+	//STARTボタンが押されたら、ゲーム開始待ちモードに移る
 	const GamePad gamepad = window.GetGamePad();
 	if (gamepad.buttonDown &GamePad::START)
 	{
@@ -93,9 +94,8 @@ void update(GLFWEW::WindowRef window, TitleScene* scene)
 		finalize(scene);//タイトル画面の後始末
 
 		//ゲームの初期設定を行う
-		gameState = gameStateMain;
-		mainScene.stageNo = 1;//ステージ1から開始
-		initialize(&mainScene);
+		gameState = gameStateHelp;
+		initialize(&firstHelpScene);
 		
 	}
 }
