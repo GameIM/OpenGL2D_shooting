@@ -15,6 +15,7 @@ const int gameStateMain = 1;//ゲーム画面の場面ID
 const int gameStateGameOver = 2;//ゲームオーバー画面の場面ID
 const int gameStatePose = 3;//ポーズ画面の場面ID
 const int gameStateClear = 4;//ゲームクリア画面の場面ID
+const int gameStateHelp = 5;//操作説明画面の場面ID
 extern int gameState;//実行中の場面ID
 
 //先行宣言
